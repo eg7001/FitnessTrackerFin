@@ -1,5 +1,6 @@
 ﻿using FitnessTracker.DTOs.Exercise;
 using FitnessTracker.DTOs.Workout;
+using FitnessTracker.Models;
 using FitnessTracker.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,20 +28,44 @@ namespace FitnessTracker.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetWorkouts()
+        public async Task<IActionResult> GetWorkouts(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
-            var workouts = await _workoutService.GetUserWorkouts(GetUserGuid());
-            if (workouts == null)
-                return BadRequest("There are no workouts for this user"); 
-            else
-                return Ok(workouts);
+            var workouts = await _workoutService.GetUserWorkouts(GetUserGuid(),page, pageSize);
+            return Ok(workouts);
         }
 
         [HttpPost("{workoutId}/exercises")]
         public async Task<IActionResult> AddWorkout([FromRoute]Guid workoutId,[FromBody]AddExerciseDto dto)
         {
-            await _workoutService.AddExerciseToWorkout(workoutId, dto);
-            return Ok("The Exercise was added succesfully");
+            try
+            {
+                await _workoutService.AddExerciseToWorkout(GetUserGuid(), workoutId, dto);
+                return Ok("The Exercise Was Addedd succesfully");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
+
+        [HttpDelete("{workoutId}/delete")]
+        public async Task<IActionResult> DeleteWorkout([FromRoute]Guid workoutId) {
+            try
+            {
+                await _workoutService.DeleteWorkout(GetUserGuid(), workoutId);
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+        }
+
     }
 }

@@ -3,6 +3,7 @@ using FitnessTracker.DTOs.Exercise;
 using FitnessTracker.DTOs.Workout;
 using FitnessTracker.Models;
 using FitnessTracker.Services.Interfaces;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 namespace FitnessTracker.Services
@@ -14,18 +15,36 @@ namespace FitnessTracker.Services
         {
             _context = context;
         }
-        public async Task AddExerciseToWorkout(Guid workoutId, AddExerciseDto dto)
+        public async Task AddExerciseToWorkout(Guid userId,Guid workoutId, AddExerciseDto dto)
         {
             var workout = await _context.Workouts
                 .Include(w => w.Exercises)
-                .FirstOrDefaultAsync(w => w.Id == workoutId);
+                .ThenInclude(we => we.Exercise)
+                .FirstOrDefaultAsync(w => w.Id == workoutId && w.UserId == userId);
 
             if (workout == null)
-                throw new Exception("Workout not found");
+                throw new UnauthorizedAccessException("Workout not found or access denied");
 
             // Check if Exercise already exists globally, or create it
-            var exercise = await _context.Exercises.FirstOrDefaultAsync(e => e.Name == dto.Name)
-                           ?? new Exercise { Name = dto.Name };
+            var exercise = await _context.Exercises
+                .FirstOrDefaultAsync(e => e.Name == dto.Name);
+
+            var alreadyExists = workout.Exercises.Any(we =>
+                    we.Exercise.Name == dto.Name);
+            if (alreadyExists)
+                throw new Exception("This exercise is already added to the workout");
+
+            if (exercise == null)
+            {
+                exercise = new Exercise
+                {
+                    Name = dto.Name,
+                    MuscleGroup = dto.MuscleGroup,
+                    IsBodyweight = dto.IsBodyweight
+                };
+                _context.Exercises.Add(exercise);
+            }
+            
             var workoutExercise = new WorkoutExercise
             {
                 Workout = workout,
@@ -43,6 +62,7 @@ namespace FitnessTracker.Services
             var workout = new Workout
             {
                 Id = Guid.NewGuid(),
+                Name = dto.Name,
                 Date = dto.Date ?? DateTime.UtcNow,
                 UserId = userId
             };
@@ -50,6 +70,19 @@ namespace FitnessTracker.Services
             _context.Workouts.Add(workout);
             await _context.SaveChangesAsync();
             return new WorkoutDto(workout.Id, dto.Name, workout.Date, new List<ExerciseDto>());
+        }
+
+        public async Task DeleteWorkout(Guid userId, Guid workoutId)
+        {
+            var workout = await _context.Workouts
+                .FirstOrDefaultAsync(w => w.UserId == userId && w.Id == workoutId);
+            if (workout == null)
+            {
+                throw new UnauthorizedAccessException("Workout not found or unaothrized access");
+            }
+            _context.Workouts.Remove(workout);
+            await _context.SaveChangesAsync();
+            return;
         }
 
         public async Task<List<WorkoutDto>> GetUserWorkouts(
@@ -68,7 +101,7 @@ namespace FitnessTracker.Services
                 .ToListAsync();
             return workouts.Select(w => new WorkoutDto(
                 w.Id,
-                "Workout",
+                w.Name,
                 w.Date,
                 w.Exercises.Select(we => new ExerciseDto(
                     we.Exercise.Id,

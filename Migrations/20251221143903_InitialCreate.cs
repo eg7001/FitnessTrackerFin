@@ -177,6 +177,7 @@ namespace FitnessTracker.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
                     Date = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
@@ -195,16 +196,15 @@ namespace FitnessTracker.Migrations
                 name: "WorkoutExercises",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     WorkoutId = table.Column<Guid>(type: "uuid", nullable: false),
                     ExerciseId = table.Column<int>(type: "integer", nullable: false),
-                    Order = table.Column<int>(type: "integer", nullable: false),
-                    Notes = table.Column<string>(type: "text", nullable: true)
+                    Sets = table.Column<int>(type: "integer", nullable: false),
+                    Repetitions = table.Column<int>(type: "integer", nullable: false),
+                    Weight = table.Column<double>(type: "double precision", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_WorkoutExercises", x => x.Id);
+                    table.PrimaryKey("PK_WorkoutExercises", x => new { x.WorkoutId, x.ExerciseId });
                     table.ForeignKey(
                         name: "FK_WorkoutExercises_Exercises_ExerciseId",
                         column: x => x.ExerciseId,
@@ -226,6 +226,8 @@ namespace FitnessTracker.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     WorkoutExerciseId = table.Column<int>(type: "integer", nullable: false),
+                    WorkoutExerciseWorkoutId = table.Column<Guid>(type: "uuid", nullable: false),
+                    WorkoutExerciseExerciseId = table.Column<int>(type: "integer", nullable: false),
                     Reps = table.Column<int>(type: "integer", nullable: false),
                     Weight = table.Column<decimal>(type: "numeric", nullable: false),
                     IsFailure = table.Column<bool>(type: "boolean", nullable: false)
@@ -234,10 +236,10 @@ namespace FitnessTracker.Migrations
                 {
                     table.PrimaryKey("PK_Sets", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Sets_WorkoutExercises_WorkoutExerciseId",
-                        column: x => x.WorkoutExerciseId,
+                        name: "FK_Sets_WorkoutExercises_WorkoutExerciseWorkoutId_WorkoutExerc~",
+                        columns: x => new { x.WorkoutExerciseWorkoutId, x.WorkoutExerciseExerciseId },
                         principalTable: "WorkoutExercises",
-                        principalColumn: "Id",
+                        principalColumns: new[] { "WorkoutId", "ExerciseId" },
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -279,19 +281,14 @@ namespace FitnessTracker.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Sets_WorkoutExerciseId",
+                name: "IX_Sets_WorkoutExerciseWorkoutId_WorkoutExerciseExerciseId",
                 table: "Sets",
-                column: "WorkoutExerciseId");
+                columns: new[] { "WorkoutExerciseWorkoutId", "WorkoutExerciseExerciseId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_WorkoutExercises_ExerciseId",
                 table: "WorkoutExercises",
                 column: "ExerciseId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_WorkoutExercises_WorkoutId",
-                table: "WorkoutExercises",
-                column: "WorkoutId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Workouts_UserId",
