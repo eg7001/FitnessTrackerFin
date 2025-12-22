@@ -1,6 +1,8 @@
 ﻿using FitnessTracker.DbContext;
 using FitnessTracker.DTOs.Exercise;
+using FitnessTracker.DTOs.Set;
 using FitnessTracker.DTOs.Workout;
+using FitnessTracker.DTOs.WorkoutExercise;
 using FitnessTracker.Models;
 using FitnessTracker.Services.Interfaces;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -15,47 +17,73 @@ namespace FitnessTracker.Services
         {
             _context = context;
         }
-        public async Task AddExerciseToWorkout(Guid userId,Guid workoutId, AddExerciseDto dto)
+        public async Task AddExerciseToWorkout(
+             Guid userId,
+             Guid workoutId,
+             AddWorkoutExerciseDto dto)
         {
             var workout = await _context.Workouts
-                .Include(w => w.Exercises)
-                .ThenInclude(we => we.Exercise)
                 .FirstOrDefaultAsync(w => w.Id == workoutId && w.UserId == userId);
 
             if (workout == null)
-                throw new UnauthorizedAccessException("Workout not found or access denied");
+                throw new UnauthorizedAccessException();
 
-            // Check if Exercise already exists globally, or create it
+            // Check if Exercise already exists globally
             var exercise = await _context.Exercises
-                .FirstOrDefaultAsync(e => e.Name == dto.Name);
+                .FirstOrDefaultAsync(e => e.Name == dto.ExerciseName);
 
-            var alreadyExists = workout.Exercises.Any(we =>
-                    we.Exercise.Name == dto.Name);
-            if (alreadyExists)
-                throw new Exception("This exercise is already added to the workout");
+            // Check if the exercise is already added to this workout
+            if (workout.WorkoutExercises.Any(we => we.Exercise.Name == dto.ExerciseName))
+                throw new Exception("Exercise already added to this workout");
 
             if (exercise == null)
             {
                 exercise = new Exercise
                 {
-                    Name = dto.Name,
+                    Name = dto.ExerciseName,
                     MuscleGroup = dto.MuscleGroup,
                     IsBodyweight = dto.IsBodyweight
                 };
                 _context.Exercises.Add(exercise);
             }
-            
+
             var workoutExercise = new WorkoutExercise
             {
-                Workout = workout,
-                Exercise = exercise,
-                Sets = dto.Sets,
-                Repetitions = dto.Repetitions,
-                Weight = dto.Weight
+                WorkoutId = workoutId,
+                Exercise = exercise
             };
+
             _context.WorkoutExercises.Add(workoutExercise);
             await _context.SaveChangesAsync();
         }
+
+        public async Task AddSetToWorkoutExercise(
+            Guid userId,
+            int workoutExerciseId,
+            AddSetDto dto)
+        {
+            var workoutExercise = await _context.WorkoutExercises
+                .Include(we => we.Workout)
+                .FirstOrDefaultAsync(we =>
+                    we.Id == workoutExerciseId &&
+                    we.Workout.UserId == userId);
+
+
+            if (workoutExercise == null)
+                throw new UnauthorizedAccessException("WorkoutExercise not found or access denied");
+
+            var set = new Set
+            {
+                WorkoutExerciseId = workoutExerciseId,
+                Reps = dto.Reps,
+                Weight = dto.Weight,
+                IsFailure = dto.IsFailure
+            };
+
+            _context.Sets.Add(set);
+            await _context.SaveChangesAsync();
+        }
+
 
         public async Task<WorkoutDto> CreateWorkout(Guid userId, CreateWorkoutDto dto)
         {
@@ -69,7 +97,7 @@ namespace FitnessTracker.Services
 
             _context.Workouts.Add(workout);
             await _context.SaveChangesAsync();
-            return new WorkoutDto(workout.Id, dto.Name, workout.Date, new List<ExerciseDto>());
+            return new WorkoutDto(workout.Id, dto.Name, workout.Date, new List<WorkoutExerciseDto>());
         }
 
         public async Task DeleteWorkout(Guid userId, Guid workoutId)
@@ -86,33 +114,49 @@ namespace FitnessTracker.Services
         }
 
         public async Task<List<WorkoutDto>> GetUserWorkouts(
-            Guid userId,
-            int page = 1, 
-            int pageSize = 10)
+             Guid userId,
+             int page = 1,
+             int pageSize = 10)
         {
+            // Step 1: Query the database with proper Includes
             var workouts = await _context.Workouts
                 .AsNoTracking()
-                .Where(w => w.UserId == userId)
-                .OrderByDescending(w => w.Date)
-                .Skip((page -1) * pageSize)
-                .Take(pageSize)
-                .Include(w => w.Exercises)
-                    .ThenInclude(we => we.Exercise)
+                .Where(w => w.UserId == userId) // Only the current user's workouts
+                .OrderByDescending(w => w.Date) // Latest first
+                .Skip((page - 1) * pageSize)   
+                .Take(pageSize)                
+                .Include(w => w.WorkoutExercises)           // Include the join table
+                    .ThenInclude(we => we.Exercise)        // Include Exercise info
+                .Include(w => w.WorkoutExercises)
+                    .ThenInclude(we => we.Sets)            // Include Sets
                 .ToListAsync();
-            return workouts.Select(w => new WorkoutDto(
+
+            // Step 2: Map EF models to DTOs
+            var result = workouts.Select(w => new WorkoutDto(
                 w.Id,
                 w.Name,
                 w.Date,
-                w.Exercises.Select(we => new ExerciseDto(
-                    we.Exercise.Id,
-                    we.Exercise.Name,
-                    we.Sets,
-                    we.Repetitions,
-                    we.Weight,
-                    we.Exercise.MuscleGroup,
-                    we.Exercise.IsBodyweight
+                w.WorkoutExercises.Select(we => new WorkoutExerciseDto(
+                    we.Id,                    // WorkoutExercise ID
+                    we.Exercise.Id,           // ExerciseId
+                    we.Exercise.Name,         // ExerciseName
+                    we.Exercise.MuscleGroup,  // MuscleGroup
+                    we.Exercise.IsBodyweight, // IsBodyweight
+                    we.Sets.Select(s => new SetDto(
+                        s.Id,
+                        s.Reps,
+                        s.Weight,
+                        s.IsFailure
+                    )).ToList()
                 )).ToList()
             )).ToList();
+
+            return result;
+        }
+
+        public Task<WorkoutDto> UpdateWorkout(Guid userid, Guid workoutId)
+        {
+            throw new NotImplementedException();
         }
     }
 }

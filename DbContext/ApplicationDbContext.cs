@@ -14,24 +14,48 @@ namespace FitnessTracker.DbContext
        : base(options)
         {
         }
-        protected override void OnModelCreating(ModelBuilder builder)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(builder);
-
-            // Many-to-many Workout <-> Exercise
-            builder.Entity<WorkoutExercise>()
-                .HasKey(we => new { we.WorkoutId, we.ExerciseId });
-
-            builder.Entity<WorkoutExercise>()
+            base.OnModelCreating(modelBuilder);
+            // Workout → WorkoutExercise (CASCADE)
+            modelBuilder.Entity<WorkoutExercise>()
                 .HasOne(we => we.Workout)
-                .WithMany(w => w.Exercises)
-                .HasForeignKey(we => we.WorkoutId);
+                .WithMany(w => w.WorkoutExercises)
+                .HasForeignKey(we => we.WorkoutId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<WorkoutExercise>()
+            // Exercise → WorkoutExercise (RESTRICT)
+            modelBuilder.Entity<WorkoutExercise>()
                 .HasOne(we => we.Exercise)
                 .WithMany(e => e.WorkoutExercises)
-                .HasForeignKey(we => we.ExerciseId);
+                .HasForeignKey(we => we.ExerciseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // WorkoutExercise → Set (CASCADE)
+            modelBuilder.Entity<Set>()
+                .HasOne(s => s.WorkoutExercise)
+                .WithMany(we => we.Sets)
+                .HasForeignKey(s => s.WorkoutExerciseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Workout fields
+            modelBuilder.Entity<Workout>()
+                .Property(w => w.Name)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            // Exercise fields
+            modelBuilder.Entity<Exercise>()
+                .Property(e => e.Name)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            // Prevent duplicate exercise names
+            modelBuilder.Entity<Exercise>()
+                .HasIndex(e => e.Name)
+                .IsUnique();
         }
+
 
     }
 }

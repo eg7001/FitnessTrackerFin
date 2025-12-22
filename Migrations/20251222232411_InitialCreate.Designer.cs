@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FitnessTracker.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251221143903_InitialCreate")]
+    [Migration("20251222232411_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -106,9 +106,13 @@ namespace FitnessTracker.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.ToTable("Exercises");
                 });
@@ -130,18 +134,12 @@ namespace FitnessTracker.Migrations
                     b.Property<decimal>("Weight")
                         .HasColumnType("numeric");
 
-                    b.Property<int>("WorkoutExerciseExerciseId")
-                        .HasColumnType("integer");
-
                     b.Property<int>("WorkoutExerciseId")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("WorkoutExerciseWorkoutId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkoutExerciseWorkoutId", "WorkoutExerciseExerciseId");
+                    b.HasIndex("WorkoutExerciseId");
 
                     b.ToTable("Sets");
                 });
@@ -152,43 +150,46 @@ namespace FitnessTracker.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AppUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("AppUserId");
 
                     b.ToTable("Workouts");
                 });
 
             modelBuilder.Entity("FitnessTracker.Models.WorkoutExercise", b =>
                 {
-                    b.Property<Guid>("WorkoutId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("ExerciseId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Repetitions")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("WorkoutId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("Sets")
-                        .HasColumnType("integer");
-
-                    b.Property<double?>("Weight")
-                        .HasColumnType("double precision");
-
-                    b.HasKey("WorkoutId", "ExerciseId");
+                    b.HasKey("Id");
 
                     b.HasIndex("ExerciseId");
+
+                    b.HasIndex("WorkoutId");
 
                     b.ToTable("WorkoutExercises");
                 });
@@ -326,8 +327,8 @@ namespace FitnessTracker.Migrations
             modelBuilder.Entity("FitnessTracker.Models.Set", b =>
                 {
                     b.HasOne("FitnessTracker.Models.WorkoutExercise", "WorkoutExercise")
-                        .WithMany()
-                        .HasForeignKey("WorkoutExerciseWorkoutId", "WorkoutExerciseExerciseId")
+                        .WithMany("Sets")
+                        .HasForeignKey("WorkoutExerciseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -336,13 +337,9 @@ namespace FitnessTracker.Migrations
 
             modelBuilder.Entity("FitnessTracker.Models.Workout", b =>
                 {
-                    b.HasOne("FitnessTracker.Models.AppUser", "User")
+                    b.HasOne("FitnessTracker.Models.AppUser", null)
                         .WithMany("Workouts")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
+                        .HasForeignKey("AppUserId");
                 });
 
             modelBuilder.Entity("FitnessTracker.Models.WorkoutExercise", b =>
@@ -350,11 +347,11 @@ namespace FitnessTracker.Migrations
                     b.HasOne("FitnessTracker.Models.Exercise", "Exercise")
                         .WithMany("WorkoutExercises")
                         .HasForeignKey("ExerciseId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("FitnessTracker.Models.Workout", "Workout")
-                        .WithMany("Exercises")
+                        .WithMany("WorkoutExercises")
                         .HasForeignKey("WorkoutId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -427,7 +424,12 @@ namespace FitnessTracker.Migrations
 
             modelBuilder.Entity("FitnessTracker.Models.Workout", b =>
                 {
-                    b.Navigation("Exercises");
+                    b.Navigation("WorkoutExercises");
+                });
+
+            modelBuilder.Entity("FitnessTracker.Models.WorkoutExercise", b =>
+                {
+                    b.Navigation("Sets");
                 });
 #pragma warning restore 612, 618
         }

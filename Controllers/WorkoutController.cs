@@ -1,5 +1,6 @@
 ﻿using FitnessTracker.DTOs.Exercise;
 using FitnessTracker.DTOs.Workout;
+using FitnessTracker.DTOs.WorkoutExercise;
 using FitnessTracker.Models;
 using FitnessTracker.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -37,7 +38,7 @@ namespace FitnessTracker.Controllers
         }
 
         [HttpPost("{workoutId}/exercises")]
-        public async Task<IActionResult> AddWorkout([FromRoute]Guid workoutId,[FromBody]AddExerciseDto dto)
+        public async Task<IActionResult> AddWorkout([FromRoute]Guid workoutId,[FromBody]AddWorkoutExerciseDto dto)
         {
             try
             {
