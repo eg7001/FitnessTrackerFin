@@ -21,14 +21,14 @@ namespace FitnessTracker.Controllers
         }
         private Guid GetUserGuid() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-        [HttpPost]
+        [HttpPost("addWorkout")]
         public async Task<IActionResult> CreateWorkout([FromBody]CreateWorkoutDto dto)
         {
             var workout = await _workoutService.CreateWorkout(GetUserGuid(), dto);
             return Ok(workout);
         }
 
-        [HttpGet]
+        [HttpGet("getWorkouts")]
         public async Task<IActionResult> GetWorkouts(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
@@ -36,8 +36,14 @@ namespace FitnessTracker.Controllers
             var workouts = await _workoutService.GetUserWorkouts(GetUserGuid(),page, pageSize);
             return Ok(workouts);
         }
+        [HttpDelete("{workoutExerciseId}/deleteExercise")]
+        public async Task<IActionResult> DeleteExercise(int workoutExercsieId) { 
+            await _workoutService.DeleteWorkoutExercise(GetUserGuid(),workoutExercsieId;
+            return Ok("The Exercise Was Deleted Succesfully");
+        }
+        
 
-        [HttpPost("{workoutId}/exercises")]
+        [HttpPost("{workoutId}/addExercises")] 
         public async Task<IActionResult> AddWorkout([FromRoute]Guid workoutId,[FromBody]AddWorkoutExerciseDto dto)
         {
             try
@@ -67,6 +73,13 @@ namespace FitnessTracker.Controllers
                 return Forbid();
             }
         }
+
+        [HttpPut("{workoutId}/update")]
+        public async Task<IActionResult> UpdateWorkout([FromRoute] Guid workoutId,UpdateWorkoutDto dto) { 
+            await _workoutService.UpdateWorkout(GetUserGuid(), workoutId, dto);
+            return Ok("The Workout Updated Succesfully");
+        }
+
 
     }
 }
