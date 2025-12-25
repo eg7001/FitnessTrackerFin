@@ -9,6 +9,7 @@ namespace FitnessTracker.Services.Interfaces
     {
         Task<WorkoutDto> CreateWorkout(Guid userId, CreateWorkoutDto dto);
         Task<List<WorkoutDto>> GetUserWorkouts(Guid userId, int page = 1, int pageSize = 10);
+        Task<WorkoutDto> GetWorkoutById(Guid userId, Guid workoutId);
         Task DeleteWorkout(Guid userId, Guid workoutId);
         Task<WorkoutDto> UpdateWorkout(Guid userid, Guid workoutId, UpdateWorkoutDto dto);
         Task AddExerciseToWorkout(Guid userid,Guid workoutId, AddWorkoutExerciseDto dto);

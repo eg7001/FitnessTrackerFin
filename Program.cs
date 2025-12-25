@@ -1,4 +1,5 @@
 using FitnessTracker.DbContext;
+using FitnessTracker.Exceptions;
 using FitnessTracker.Models;
 using FitnessTracker.Services;
 using FitnessTracker.Services.Interfaces;
@@ -56,6 +57,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

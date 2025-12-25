@@ -18,7 +18,6 @@ namespace FitnessTracker.Services
         {
             _context = context;
         }
-
         public async Task<List<WorkoutDto>> GetUserWorkouts(
              Guid userId,
              int page = 1,
@@ -59,6 +58,41 @@ namespace FitnessTracker.Services
 
             return result;
         }
+        public async Task<WorkoutDto> GetWorkoutById(Guid userId,Guid workoutId)
+        {
+            var workout = await _context.Workouts
+                .AsNoTracking()
+                .Include(w => w.WorkoutExercises)
+                    .ThenInclude(we => we.Exercise)
+                .Include(w => w.WorkoutExercises)
+                    .ThenInclude(we => we.Sets)
+                .FirstOrDefaultAsync(w =>
+                    w.Id == workoutId &&
+                    w.UserId == userId
+                );
+
+            if (workout == null)
+                throw new UnauthorizedAccessException("Workout not found or access denied");
+
+            return new WorkoutDto(
+                workout.Id,
+                workout.Name,
+                workout.Date,
+                workout.WorkoutExercises.Select(we => new WorkoutExerciseDto(
+                    we.Id,
+                    we.ExerciseId,
+                    we.Exercise.Name,
+                    we.Exercise.MuscleGroup,
+                    we.Exercise.IsBodyweight,
+                    we.Sets.Select(s => new SetDto(
+                        s.Id,
+                        s.Reps,
+                        s.Weight,
+                        s.IsFailure
+                    )).ToList()
+                )).ToList()
+            );
+        }`
         public async Task AddExerciseToWorkout(
              Guid userId,
              Guid workoutId,
@@ -93,8 +127,6 @@ namespace FitnessTracker.Services
             _context.WorkoutExercises.Add(workoutExercise);
             await _context.SaveChangesAsync();
         }
-        
-
         public async Task<WorkoutDto> CreateWorkout(Guid userId, CreateWorkoutDto dto)
         {
             var workout = new Workout
@@ -109,9 +141,6 @@ namespace FitnessTracker.Services
             await _context.SaveChangesAsync();
             return new WorkoutDto(workout.Id, dto.Name, workout.Date, new List<WorkoutExerciseDto>());
         }
-
-        
-
         public async Task DeleteWorkout(Guid userId, Guid workoutId)
         {
             var workout = await _context.Workouts
@@ -136,10 +165,6 @@ namespace FitnessTracker.Services
             _context.WorkoutExercises.Remove(workoutExercise); 
             await _context.SaveChangesAsync();
         }
-
-
-        
-
         public async Task<WorkoutDto> UpdateWorkout(Guid userid, Guid workoutId, UpdateWorkoutDto dto)
         {
             var workout =  await _context.Workouts

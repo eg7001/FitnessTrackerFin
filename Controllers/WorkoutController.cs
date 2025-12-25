@@ -38,6 +38,23 @@ namespace FitnessTracker.Controllers
             var workouts = await _workoutService.GetUserWorkouts(GetUserGuid(),page, pageSize);
             return Ok(workouts);
         }
+        [HttpGet("{workoutId}")]
+        public async Task<IActionResult> GetWorkoutById(Guid workoutId)
+        {
+            try
+            {
+                var workout = await _workoutService.GetWorkoutById(
+                    GetUserGuid(),
+                    workoutId
+                );
+
+                return Ok(workout);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return NotFound();
+            }
+        }
         // UPDATE workout
         [HttpPut("{workoutId}")]
         public async Task<IActionResult> UpdateWorkout([FromRoute] Guid workoutId, UpdateWorkoutDto dto)
@@ -75,7 +92,7 @@ namespace FitnessTracker.Controllers
 
 
         // ADD set
-        [HttpPost("{workoutId}/exercises/{workoutExerciseId}/sets")]
+        [HttpPost("sets")]
         public async Task<IActionResult> AddSet(
             Guid workoutId,
             int workoutExerciseId,
