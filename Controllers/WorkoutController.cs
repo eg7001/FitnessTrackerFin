@@ -1,4 +1,5 @@
 ﻿using FitnessTracker.DTOs.Exercise;
+using FitnessTracker.DTOs.Set;
 using FitnessTracker.DTOs.Workout;
 using FitnessTracker.DTOs.WorkoutExercise;
 using FitnessTracker.Models;
@@ -21,14 +22,15 @@ namespace FitnessTracker.Controllers
         }
         private Guid GetUserGuid() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-        [HttpPost("addWorkout")]
+        //Create Workout
+        [HttpPost]
         public async Task<IActionResult> CreateWorkout([FromBody]CreateWorkoutDto dto)
         {
             var workout = await _workoutService.CreateWorkout(GetUserGuid(), dto);
             return Ok(workout);
         }
-
-        [HttpGet("getWorkouts")]
+        //Get Workouts
+        [HttpGet]
         public async Task<IActionResult> GetWorkouts(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
@@ -36,50 +38,67 @@ namespace FitnessTracker.Controllers
             var workouts = await _workoutService.GetUserWorkouts(GetUserGuid(),page, pageSize);
             return Ok(workouts);
         }
-        [HttpDelete("{workoutExerciseId}/deleteExercise")]
-        public async Task<IActionResult> DeleteExercise(int workoutExercsieId) { 
-            await _workoutService.DeleteWorkoutExercise(GetUserGuid(),workoutExercsieId;
-            return Ok("The Exercise Was Deleted Succesfully");
-        }
-        
-
-        [HttpPost("{workoutId}/addExercises")] 
-        public async Task<IActionResult> AddWorkout([FromRoute]Guid workoutId,[FromBody]AddWorkoutExerciseDto dto)
+        // UPDATE workout
+        [HttpPut("{workoutId}")]
+        public async Task<IActionResult> UpdateWorkout([FromRoute] Guid workoutId, UpdateWorkoutDto dto)
         {
-            try
-            {
-                await _workoutService.AddExerciseToWorkout(GetUserGuid(), workoutId, dto);
-                return Ok("The Exercise Was Addedd succesfully");
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Forbid();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        [HttpDelete("{workoutId}/delete")]
-        public async Task<IActionResult> DeleteWorkout([FromRoute]Guid workoutId) {
-            try
-            {
-                await _workoutService.DeleteWorkout(GetUserGuid(), workoutId);
-                return NoContent();
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Forbid();
-            }
-        }
-
-        [HttpPut("{workoutId}/update")]
-        public async Task<IActionResult> UpdateWorkout([FromRoute] Guid workoutId,UpdateWorkoutDto dto) { 
             await _workoutService.UpdateWorkout(GetUserGuid(), workoutId, dto);
             return Ok("The Workout Updated Succesfully");
         }
+        
+        //Delete Workout
+        [HttpDelete("{workoutId}")]
+        public async Task<IActionResult> DeleteWorkout([FromRoute] Guid workoutId)
+        {
+            await _workoutService.DeleteWorkout(GetUserGuid(), workoutId);
+            return NoContent();
+        }
+
+        // ADD exercise
+        [HttpPost("{workoutId}/exercises")]
+        public async Task<IActionResult> AddExercise(
+            Guid workoutId,
+            AddWorkoutExerciseDto dto)
+        {
+            await _workoutService.AddExerciseToWorkout(GetUserGuid(), workoutId, dto);
+            return NoContent();
+        }
+        // DELETE exercise
+        [HttpDelete("{workoutId}/exercises/{workoutExerciseId}")]
+        public async Task<IActionResult> DeleteExercise(
+            Guid workoutId,
+            int workoutExerciseId)
+        {
+            await _workoutService.DeleteWorkoutExercise(GetUserGuid(), workoutExerciseId);
+            return NoContent();
+        }
 
 
+        // ADD set
+        [HttpPost("{workoutId}/exercises/{workoutExerciseId}/sets")]
+        public async Task<IActionResult> AddSet(
+            Guid workoutId,
+            int workoutExerciseId,
+            AddSetDto dto)
+        {
+            await _workoutService.AddSetToWorkoutExercise(GetUserGuid(), workoutExerciseId, dto);
+            return NoContent();
+        }
+        [HttpPost("sets/{setId}")]
+        public async Task<IActionResult> UpdateSet(
+            Guid workoutId,
+            int setId,
+            UpdateSetDto dto
+            )
+        {
+            await _workoutService.UpdateSet(GetUserGuid(), setId, dto);
+            return NoContent();
+        }
+        [HttpDelete("sets/{setId}")]
+        public async Task<IActionResult> DeleteSet(int setId)
+        {
+            await  _workoutService.DeleteSet(GetUserGuid(), setId); 
+            return NoContent();
+        }
     }
 }

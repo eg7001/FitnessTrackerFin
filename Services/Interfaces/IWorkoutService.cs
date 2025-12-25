@@ -14,7 +14,7 @@ namespace FitnessTracker.Services.Interfaces
         Task AddExerciseToWorkout(Guid userid,Guid workoutId, AddWorkoutExerciseDto dto);
         Task DeleteWorkoutExercise(Guid userid, int workoutExercsieId);
         Task AddSetToWorkoutExercise(Guid userId,int workoutExerciseId, AddSetDto dto);
-        Task UpdateSet(Guid userId, int setId, AddSetDto dto);
+        Task UpdateSet(Guid userId, int setId, UpdateSetDto dto);
         Task DeleteSet(Guid userId, int setId);
     }
 }

@@ -12,9 +12,5 @@ namespace FitnessTracker.Models
 
         public ICollection<WorkoutExercise> WorkoutExercises { get; set; } = new List<WorkoutExercise>();
 
-        public static implicit operator Task<object>(Exercise v)
-        {
-            throw new NotImplementedException();
-        }
     }
 }
