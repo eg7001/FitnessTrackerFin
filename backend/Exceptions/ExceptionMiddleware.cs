@@ -1,4 +1,4 @@
-﻿namespace FitnessTracker.Exceptions
+﻿namespace FitnessTracker.Exceptions;
 public class ExceptionMiddleware
 {
     private readonly RequestDelegate _next;

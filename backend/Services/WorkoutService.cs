@@ -58,7 +58,7 @@ namespace FitnessTracker.Services
 
             return result;
         }
-        public async Task<WorkoutDto> GetWorkoutById(Guid userId,Guid workoutId)
+        public async Task<WorkoutDto> GetWorkoutById(Guid userId, Guid workoutId)
         {
             var workout = await _context.Workouts
                 .AsNoTracking()
@@ -92,7 +92,7 @@ namespace FitnessTracker.Services
                     )).ToList()
                 )).ToList()
             );
-        }`
+        }
         public async Task AddExerciseToWorkout(
              Guid userId,
              Guid workoutId,
