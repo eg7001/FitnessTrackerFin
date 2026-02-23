@@ -1,16 +1,47 @@
 <script lang="ts" setup>
+// =============================
+// Imports
+// =============================
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import type { Workout } from '@/types/workout'
+import type { Workout, WorkoutExercise, ExerciseSet } from '@/types/workout'
 import { getWorkoutById } from '@/services/workoutService'
+import TopLayout from '@/components/TopLayout.vue'
 
-const route = useRoute()
+// =============================
+// Reactive State
+// =============================
 const workout = ref<Workout | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-const workoutId = route.params.id as string
+// =============================
+// Get route param safely
+// =============================
+const route = useRoute()
+const workoutId = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id
 
+if (!workoutId) {
+  throw new Error('No workout ID found in route params')
+}
+
+// =============================
+// Helper Functions
+// =============================
+
+// Convert ISO date string to human-readable
+const formatDate = (dateStr: string): string => {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString()
+}
+
+// Format a single set
+const formatSet = (s: ExerciseSet): string =>
+  `Reps: ${s.reps}, Weight: ${s.weight}, Failure: ${s.isFailure ? 'Yes' : 'No'}`
+
+// =============================
+// Fetch Workout on Mount
+// =============================
 onMounted(async () => {
   loading.value = true
   error.value = null
@@ -22,33 +53,41 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString()
-}
 </script>
 
 <template>
-  <div class="workout-detail-page">
-    <div v-if="!loading && workout">
-      <h1>{{ workout.name }}</h1>
-      <p>Date: {{ formatDate(workout.date) }}</p>
+  <TopLayout>
+    <div class="workout-detail-page">
+      <!-- Loading -->
+      <p v-if="loading">Loading workout...</p>
 
-      <h2>Exercises</h2>
-      <div v-if="workout.exercises.length === 0">No exercises in this workout.</div>
-      <ul v-else>
-        <li v-for="we in workout.exercises" :key="we.id">
-          <strong>{{ we.exercise.name }}</strong>
-          <ul>
-            <li v-for="s in we.sets" :key="s.id">
-              Reps: {{ s.reps }}, Weight: {{ s.weight }}, Failure: {{ s.isFailure ? 'Yes' : 'No' }}
-            </li>
-          </ul>
-        </li>
-      </ul>
+      <!-- Error -->
+      <p v-else-if="error" class="error">{{ error }}</p>
+
+      <!-- Workout Content -->
+      <div v-else-if="workout">
+        <h1>{{ workout.name }}</h1>
+        <p>Date: {{ formatDate(workout.date) }}</p>
+
+        <h2>Exercises</h2>
+        <div v-if="workout.exercises.length === 0">No exercises in this workout.</div>
+
+        <ul v-else>
+          <li v-for="we in workout.exercises" :key="we.id">
+            <strong>{{ we.exercise.name }}</strong>
+            <em v-if="we.exercise.muscleGroup"> — {{ we.exercise.muscleGroup }}</em>
+
+            <ul>
+              <li v-for="s in we.sets" :key="s.id">{{ formatSet(s) }}</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Fallback -->
+      <p v-else>No workout data found.</p>
     </div>
-  </div>
+  </TopLayout>
 </template>
 
 <style scoped>

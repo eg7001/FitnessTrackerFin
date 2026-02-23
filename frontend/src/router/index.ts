@@ -9,6 +9,7 @@ import Exercises from '../pages/Exercises.vue'
 import Login from '../pages/Login.vue'
 import NotFound from '../pages/NotFound.vue'
 import WorkoutDetail from '@/pages/WorkoutDetail.vue'
+import ExerciseForm from '@/pages/ExerciseForm.vue'
 const routes: Array<RouteRecordRaw> = [
   { path: '/', component: Home },
 
@@ -19,6 +20,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/workouts',
+    name: 'Workouts',
     component: Workouts,
     meta: { requiresAuth: true },
   },
@@ -29,6 +31,7 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/workouts/:id',
+    name: 'WorkoutDetail',
     component: WorkoutDetail,
     meta: { requiresAuth: true },
   },
@@ -37,7 +40,11 @@ const routes: Array<RouteRecordRaw> = [
     component: Exercises,
     meta: { requiresAuth: true },
   },
-
+  {
+    path: '/exercises/new',
+    component: ExerciseForm,
+    meta: { requiresAuth: true },
+  },
   {
     path: '/login',
     component: Login,

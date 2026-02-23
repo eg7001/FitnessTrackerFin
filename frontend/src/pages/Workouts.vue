@@ -1,64 +1,77 @@
 <script lang="ts" setup>
+// =============================
+// Imports
+// =============================
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import type { Workout } from '@/types/workout'
 import { getWorkouts } from '@/services/workoutService'
+import TopLayout from '@/components/TopLayout.vue'
 
-// Reactive state
+// =============================
+// Reactive State
+// =============================
 const workouts = ref<Workout[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-// Load workouts on mount
+// Router for navigation (optional, for programmatic navigation)
+const router = useRouter()
+
+// =============================
+// Helper Functions
+// =============================
+const formatDate = (dateStr: string): string => {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString()
+}
+
+// =============================
+// Fetch Workouts on Mount
+// =============================
 onMounted(async () => {
   loading.value = true
   error.value = null
-
   try {
-    workouts.value = await getWorkouts() // <- must assign to .value
-    console.log('Fetched workouts:', workouts.value) // debug
+    workouts.value = await getWorkouts()
+    console.log('Fetched workouts:', workouts.value) // Debug
   } catch (err: any) {
-    error.value = err.message || 'Failed to load workouts'
+    error.value = err.response?.data?.message || err.message || 'Failed to load workouts'
   } finally {
     loading.value = false
   }
 })
-
-// Optional: format date for display
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString()
-}
 </script>
 
 <template>
-  <div class="workouts-page">
-    <h1>Workouts</h1>
+  <top-layout>
+    <div class="workouts-page">
+      <h1>My Workouts</h1>
 
-    <!-- Loading state -->
-    <p v-if="loading">Loading workouts...</p>
+      <!-- Loading -->
+      <p v-if="loading">Loading workouts...</p>
 
-    <!-- Error state -->
-    <p v-if="error" class="error">{{ error }}</p>
+      <!-- Error -->
+      <p v-else-if="error" class="error">{{ error }}</p>
 
-    <!-- Empty state -->
-    <p v-if="!loading && workouts.length === 0">No workouts found.</p>
+      <!-- Empty -->
+      <p v-else-if="workouts.length === 0">No workouts found.</p>
 
-    <!-- Workouts list -->
-    <ul v-if="!loading && workouts.length > 0">
-      <li v-for="w in workouts" :key="w.id">
-        <router-link :to="{ name: 'WorkoutDetail', params: { id: w.id } }">
-          <strong>{{ w.name }}</strong> — {{ formatDate(w.date) }}
-        </router-link>
-      </li>
-    </ul>
-  </div>
+      <!-- Workouts List -->
+      <ul v-else>
+        <li v-for="w in workouts" :key="w.id">
+          <router-link :to="{ path: `/workouts/${w.id}` }">
+            <strong>{{ w.name }}</strong> — {{ formatDate(w.date) }}
+          </router-link>
+        </li>
+      </ul>
+    </div>
+  </top-layout>
 </template>
 
 <style scoped>
 .workouts-page {
-  max-width: 600px;
   margin: 0 auto;
-  padding: 1rem;
 }
 
 .error {

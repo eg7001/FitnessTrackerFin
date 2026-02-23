@@ -1,45 +1,104 @@
+<script lang="ts" setup>
+// =============================
+// Imports
+// =============================
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '@/services/api'
+import TopLayout from '@/components/TopLayout.vue'
+
+// =============================
+// Types
+// =============================
+export interface Exercise {
+  id: number
+  name: string
+  muscleGroup?: string
+  isBodyweight: boolean
+}
+
+// =============================
+// Reactive State
+// =============================
+const exercises = ref<Exercise[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
+
+const router = useRouter()
+
+// =============================
+// Fetch Exercises
+// =============================
+const getExercises = async () => {
+  loading.value = true
+  error.value = null
+
+  try {
+    const res = await api.get<Exercise[]>('/exercises')
+    exercises.value = res.data
+    console.log('Fetched exercises:', exercises.value)
+  } catch (err: any) {
+    error.value = err.response?.data?.message || err.message || 'Failed to load exercises'
+  } finally {
+    loading.value = false
+  }
+}
+
+// Fetch on mount
+onMounted(() => {
+  getExercises()
+})
+
+// =============================
+// Navigation
+// =============================
+const goToCreate = () => {
+  router.push('/exercises/new')
+}
+</script>
+
 <template>
   <TopLayout>
-    <h1>Exercises</h1>
+    <div class="exercises-page">
+      <h1>Exercises</h1>
 
-    <ul class="exercise-list">
-      <li v-for="e in exercises" :key="e.id">{{ e.name }} - {{ e.muscle }}</li>
-    </ul>
+      <button @click="goToCreate">Create New Exercise</button>
+
+      <!-- Loading -->
+      <p v-if="loading">Loading exercises...</p>
+
+      <!-- Error -->
+      <p v-else-if="error" class="error">{{ error }}</p>
+
+      <!-- Empty -->
+      <p v-else-if="exercises.length === 0">No exercises found.</p>
+
+      <!-- Exercises List -->
+      <ul v-else>
+        <li v-for="ex in exercises" :key="ex.id">
+          <strong>{{ ex.name }}</strong>
+          <em v-if="ex.muscleGroup"> — {{ ex.muscleGroup }}</em>
+          <span v-if="ex.isBodyweight"> (Bodyweight)</span>
+        </li>
+      </ul>
+    </div>
   </TopLayout>
 </template>
 
-<script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import TopLayout from '../components/TopLayout.vue'
-
-interface Exercise {
-  id: number
-  name: string
-  muscle: string
-}
-
-const exercises = ref<Exercise[]>([])
-
-onMounted(() => {
-  exercises.value = [
-    { id: 1, name: 'Bench Press', muscle: 'Chest' },
-    { id: 2, name: 'Deadlift', muscle: 'Back' },
-    { id: 3, name: 'Squat', muscle: 'Legs' },
-  ]
-})
-</script>
-
 <style scoped>
-.exercise-list {
-  list-style: none;
-  padding: 0;
+.exercises-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem;
 }
 
-.exercise-list li {
-  background: white;
-  padding: 15px;
-  margin-bottom: 10px;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+button {
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+}
+
+.error {
+  color: red;
+  font-weight: bold;
 }
 </style>
