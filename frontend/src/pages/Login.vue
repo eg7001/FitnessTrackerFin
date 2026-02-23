@@ -1,62 +1,83 @@
 <template>
   <TopLayout>
-    <h1>Login</h1>
-    <form @submit.prevent="login" class="form">
-      <label>
-        Email
-        <input type="email" v-model="email" required />
-      </label>
-      <label>
-        Password
-        <input type="password" v-model="password" required />
-      </label>
-      <button type="submit" class="btn">Login</button>
-    </form>
+    <div class="login-container">
+      <h1>Login</h1>
+
+      <form @submit.prevent="handleLogin">
+        <div class="form-group">
+          <label>Email</label>
+          <input v-model="email" type="email" required />
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <input v-model="password" type="password" required />
+        </div>
+
+        <button type="submit" :disabled="loading">
+          {{ loading ? 'Logging in...' : 'Login' }}
+        </button>
+
+        <p v-if="error" class="error">{{ error }}</p>
+      </form>
+    </div>
   </TopLayout>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import TopLayout from '../components/TopLayout.vue'
+import { login } from '../services/authService'
 
 const email = ref('')
 const password = ref('')
+const loading = ref(false)
+const error = ref('')
 
-function login() {
-  console.log('Login attempt:', { email: email.value, password: password.value })
-  alert('Login (mock) successful')
-  email.value = ''
-  password.value = ''
+const router = useRouter()
+
+async function handleLogin() {
+  error.value = ''
+  loading.value = true
+
+  try {
+    await login(email.value, password.value)
+    router.push('/dashboard')
+  } catch (err: any) {
+    error.value = err.response?.data?.message || 'Invalid email or password'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
 <style scoped>
-.form {
-  display: flex;
-  flex-direction: column;
+.login-container {
   max-width: 400px;
-  gap: 15px;
 }
 
-.form label {
-  display: flex;
-  flex-direction: column;
-  font-weight: bold;
+.form-group {
+  margin-bottom: 15px;
 }
 
-.form input {
-  padding: 8px 10px;
+input {
+  width: 100%;
+  padding: 8px;
   margin-top: 5px;
-  border-radius: 5px;
-  border: 1px solid #ccc;
 }
 
-.btn {
-  padding: 10px 15px;
+button {
+  width: 100%;
+  padding: 10px;
   background: #2563eb;
   color: white;
-  border-radius: 6px;
   border: none;
-  cursor: pointer;
+  border-radius: 6px;
+}
+
+.error {
+  margin-top: 10px;
+  color: red;
 }
 </style>

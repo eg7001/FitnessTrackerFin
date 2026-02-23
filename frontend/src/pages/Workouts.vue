@@ -1,56 +1,68 @@
-<template>
-  <TopLayout>
-    <h1>Workouts</h1>
-    <router-link to="/workouts/new" class="btn">Create New Workout</router-link>
-
-    <ul class="workout-list">
-      <li v-for="w in workouts" :key="w.id">{{ w.name }} - {{ w.date }}</li>
-    </ul>
-  </TopLayout>
-</template>
-
-<script setup lang="ts">
+<script lang="ts" setup>
 import { ref, onMounted } from 'vue'
-import TopLayout from '../components/TopLayout.vue'
+import type { Workout } from '@/types/workout'
+import { getWorkouts } from '@/services/workoutService'
 
-interface Workout {
-  id: number
-  name: string
-  date: string
-}
-
+// Reactive state
 const workouts = ref<Workout[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
 
-onMounted(() => {
-  workouts.value = [
-    { id: 1, name: 'Push Day', date: '2026-02-17' },
-    { id: 2, name: 'Pull Day', date: '2026-02-16' },
-    { id: 3, name: 'Leg Day', date: '2026-02-15' },
-  ]
+// Load workouts on mount
+onMounted(async () => {
+  loading.value = true
+  error.value = null
+
+  try {
+    workouts.value = await getWorkouts() // <- must assign to .value
+    console.log('Fetched workouts:', workouts.value) // debug
+  } catch (err: any) {
+    error.value = err.message || 'Failed to load workouts'
+  } finally {
+    loading.value = false
+  }
 })
+
+// Optional: format date for display
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString()
+}
 </script>
 
+<template>
+  <div class="workouts-page">
+    <h1>Workouts</h1>
+
+    <!-- Loading state -->
+    <p v-if="loading">Loading workouts...</p>
+
+    <!-- Error state -->
+    <p v-if="error" class="error">{{ error }}</p>
+
+    <!-- Empty state -->
+    <p v-if="!loading && workouts.length === 0">No workouts found.</p>
+
+    <!-- Workouts list -->
+    <ul v-if="!loading && workouts.length > 0">
+      <li v-for="w in workouts" :key="w.id">
+        <router-link :to="{ name: 'WorkoutDetail', params: { id: w.id } }">
+          <strong>{{ w.name }}</strong> — {{ formatDate(w.date) }}
+        </router-link>
+      </li>
+    </ul>
+  </div>
+</template>
+
 <style scoped>
-.btn {
-  display: inline-block;
-  margin-bottom: 15px;
-  padding: 10px 15px;
-  background: #2563eb;
-  color: white;
-  border-radius: 6px;
-  text-decoration: none;
+.workouts-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 1rem;
 }
 
-.workout-list {
-  list-style: none;
-  padding: 0;
-}
-
-.workout-list li {
-  background: white;
-  padding: 15px;
-  margin-bottom: 10px;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+.error {
+  color: red;
+  font-weight: bold;
 }
 </style>

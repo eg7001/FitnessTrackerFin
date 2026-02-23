@@ -4,7 +4,8 @@
     <header class="topbar">
       <div class="logo">Fitness Tracker</div>
       <nav class="nav-links">
-        <router-link to="/" exact>Dashboard</router-link>
+        <router-link to="/">Home</router-link>
+        <router-link to="/dashboard">Dashboard</router-link>
         <router-link to="/workouts">Workouts</router-link>
         <router-link to="/workouts/new">New Workout</router-link>
         <router-link to="/exercises">Exercises</router-link>
