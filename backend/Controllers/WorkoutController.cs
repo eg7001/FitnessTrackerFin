@@ -16,9 +16,11 @@ namespace FitnessTracker.Controllers
     public class WorkoutController : ControllerBase
     {
         private readonly IWorkoutService _workoutService;
-        public WorkoutController(IWorkoutService workoutService)
+        private readonly IWorkoutExerciseService _workoutExerciseService;
+        public WorkoutController(IWorkoutService workoutService, IWorkoutExerciseService workoutExerciseService)
         {
             _workoutService = workoutService;
+            _workoutExerciseService = workoutExerciseService;
         }
         private Guid GetUserGuid() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
@@ -77,7 +79,13 @@ namespace FitnessTracker.Controllers
             Guid workoutId,
             AddWorkoutExerciseDto dto)
         {
-            await _workoutService.AddExerciseToWorkout(GetUserGuid(), workoutId, dto);
+            await _workoutExerciseService.AddExerciseToWorkout(GetUserGuid(), workoutId, dto);
+            return NoContent();
+        }
+
+        [HttpPost("createExercise")]
+        public async Task<IActionResult> CreateExercise([FromBody] CreateExerciseDto createExerciseDto)
+        {
             return NoContent();
         }
         // DELETE exercise
@@ -86,36 +94,9 @@ namespace FitnessTracker.Controllers
             Guid workoutId,
             int workoutExerciseId)
         {
-            await _workoutService.DeleteWorkoutExercise(GetUserGuid(), workoutExerciseId);
+            await _workoutExerciseService.DeleteWorkoutExercise(GetUserGuid(), workoutExerciseId);
             return NoContent();
         }
 
-
-        // ADD set
-        [HttpPost("sets")]
-        public async Task<IActionResult> AddSet(
-            Guid workoutId,
-            int workoutExerciseId,
-            AddSetDto dto)
-        {
-            await _workoutService.AddSetToWorkoutExercise(GetUserGuid(), workoutExerciseId, dto);
-            return NoContent();
-        }
-        [HttpPost("sets/{setId}")]
-        public async Task<IActionResult> UpdateSet(
-            Guid workoutId,
-            int setId,
-            UpdateSetDto dto
-            )
-        {
-            await _workoutService.UpdateSet(GetUserGuid(), setId, dto);
-            return NoContent();
-        }
-        [HttpDelete("sets/{setId}")]
-        public async Task<IActionResult> DeleteSet(int setId)
-        {
-            await  _workoutService.DeleteSet(GetUserGuid(), setId); 
-            return NoContent();
-        }
     }
 }
