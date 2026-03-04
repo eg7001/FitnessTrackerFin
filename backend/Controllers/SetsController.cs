@@ -1,5 +1,6 @@
 ﻿using FitnessTracker.DTOs.Set;
 using FitnessTracker.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -8,6 +9,7 @@ namespace FitnessTracker.Controllers
 {
     [Route("api/sets")]
     [ApiController]
+    [Authorize]
     public class SetsController : ControllerBase
     {
         private readonly ISetService _setService;

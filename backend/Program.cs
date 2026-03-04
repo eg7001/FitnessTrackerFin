@@ -18,8 +18,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-
+// DEPENDENCIES
 builder.Services.AddScoped<IWorkoutService, WorkoutService>();
+builder.Services.AddScoped<IExerciseService, ExerciseService>();
+builder.Services.AddScoped<ISetService, SetService>();
+builder.Services.AddScoped<IWorkoutExerciseService, WorkoutExerciseService>();
+
 
 // TOken Dependency
 builder.Services.AddScoped<ITokenService, TokenService>();
