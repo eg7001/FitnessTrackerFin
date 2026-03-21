@@ -27,4 +27,8 @@
     <ContainerPort Include="8081" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="DTOs\QueryObject\" />
+  </ItemGroup>
+
 </Project>

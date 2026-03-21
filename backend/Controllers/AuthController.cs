@@ -1,4 +1,5 @@
 ﻿using FitnessTracker.DTOs.Auth;
+using FitnessTracker.DTOs.Refresh;
 using FitnessTracker.Models;
 using FitnessTracker.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
@@ -28,5 +29,11 @@ public class AuthController : ControllerBase
     {
         var token = await _authService.Login(dto);
         return Ok(token);
+    }
+    [HttpPost("Refresh")]
+    public async Task<IActionResult> Refresh(TokenRefreshRequestDto dto)
+    {
+        var result = await _authService.RefreshToken(dto);
+        return Ok(result);
     }
 }

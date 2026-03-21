@@ -24,7 +24,7 @@ builder.Services.AddScoped<IWorkoutService, WorkoutService>();
 builder.Services.AddScoped<IExerciseService, ExerciseService>();
 builder.Services.AddScoped<ISetService, SetService>();
 builder.Services.AddScoped<IWorkoutExerciseService, WorkoutExerciseService>();
-
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 // TOken Dependency
 builder.Services.AddScoped<ITokenService, TokenService>();

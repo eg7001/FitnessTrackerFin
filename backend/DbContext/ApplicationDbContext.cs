@@ -10,6 +10,7 @@ namespace FitnessTracker.DbContext
         public DbSet<Exercise> Exercises => Set<Exercise>();
         public DbSet<WorkoutExercise> WorkoutExercises => Set<WorkoutExercise>();
         public DbSet<Set> Sets => Set<Set>();
+        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
        : base(options)
         {
