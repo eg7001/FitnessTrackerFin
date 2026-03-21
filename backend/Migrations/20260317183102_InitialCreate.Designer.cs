@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FitnessTracker.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251224201203_InitialCreate")]
+    [Migration("20260317183102_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

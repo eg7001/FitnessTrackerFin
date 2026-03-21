@@ -1,5 +1,5 @@
 using FitnessTracker.DbContext;
-using FitnessTracker.Exceptions;
+using FitnessTracker.Middleware;
 using FitnessTracker.Models;
 using FitnessTracker.Services;
 using FitnessTracker.Services.Interfaces;
@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using System.Security.Claims;
 using System.Text;
 
 
@@ -55,8 +56,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
-            )
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
+        ),
+            NameClaimType = ClaimTypes.NameIdentifier // ✅ important
         };
     });
 

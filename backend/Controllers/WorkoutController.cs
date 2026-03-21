@@ -83,11 +83,6 @@ namespace FitnessTracker.Controllers
             return NoContent();
         }
 
-        [HttpPost("createExercise")]
-        public async Task<IActionResult> CreateExercise([FromBody] CreateExerciseDto createExerciseDto)
-        {
-            return NoContent();
-        }
         // DELETE exercise
         [HttpDelete("{workoutId}/exercises/{workoutExerciseId}")]
         public async Task<IActionResult> DeleteExercise(

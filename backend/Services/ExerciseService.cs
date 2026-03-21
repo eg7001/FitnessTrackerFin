@@ -28,7 +28,7 @@ namespace FitnessTracker.Services
             await _context.SaveChangesAsync();
         }
 
-            public async Task<ExerciseDto> GetExerciseById(int id)
+        public async Task<ExerciseDto> GetExerciseById(int id)
             {
                 var exercise = await _context.Exercises.FirstOrDefaultAsync(e => e.Id == id);
                 if (exercise == null) {
@@ -41,20 +41,21 @@ namespace FitnessTracker.Services
                      exercise.IsBodyweight
                 );
                 return toReturn;
-            }
+        }
 
-        public async Task<List<ExerciseDto>> GetExercises()
+        public async Task<List<ReturnExerciseDto>> GetExercises()
         {
             var allExercises = await _context.Exercises
                 .AsNoTracking()
                 .OrderBy(e => e.MuscleGroup)
-                .Include(e => e.WorkoutExercises)
-                .ThenInclude(w => w.Id)
                 .ToListAsync();
-            ///var results = allExercises.Select(e => new ReturnExerciseDto(
-                
-               /// );
-            throw new NotImplementedException();
+            var results = allExercises.Select(e => new ReturnExerciseDto(
+                e.Id,
+                e.Name,
+                e.MuscleGroup,
+                e.IsBodyweight
+                )).ToList();
+            return results;
         }
     }
 }

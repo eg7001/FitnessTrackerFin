@@ -20,7 +20,7 @@ namespace FitnessTracker.Controllers
         private Guid GetUserGuid() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
         // ADD set
-        [HttpPost("workout-exercises/{workoutExerciseId}/sets")]
+        [HttpPost("/api/workout-exercises/{workoutExerciseId}/sets")]
         public async Task<IActionResult> AddSet(
             Guid workoutId,
             int workoutExerciseId,
@@ -29,7 +29,7 @@ namespace FitnessTracker.Controllers
             await _setService.AddSetToWorkoutExercise(GetUserGuid(), workoutExerciseId, dto);
             return NoContent();
         }
-        [HttpPost("{setId}")]
+        [HttpPut("{setId}")]
         public async Task<IActionResult> UpdateSet(
             Guid workoutId,
             int setId,

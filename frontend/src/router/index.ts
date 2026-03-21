@@ -10,6 +10,7 @@ import Login from '../pages/Login.vue'
 import NotFound from '../pages/NotFound.vue'
 import WorkoutDetail from '@/pages/WorkoutDetail.vue'
 import ExerciseForm from '@/pages/ExerciseForm.vue'
+import Register from '@/pages/Register.vue'
 const routes: Array<RouteRecordRaw> = [
   { path: '/', component: Home },
 
@@ -48,6 +49,11 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/login',
     component: Login,
+    meta: { guestOnly: true },
+  },
+  {
+    path: '/register',
+    component: Register,
     meta: { guestOnly: true },
   },
 

@@ -10,6 +10,7 @@
         <router-link to="/workouts/new">New Workout</router-link>
         <router-link to="/exercises">Exercises</router-link>
         <router-link to="/login">Login</router-link>
+        <router-link to="/register"> Register</router-link>
       </nav>
     </header>
 

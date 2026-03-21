@@ -8,7 +8,7 @@ namespace FitnessTracker.Controllers
 {
     [Route("api/exercises")]
     [ApiController]
-    [Authorize]
+        [Authorize]
     public class ExercisesController : ControllerBase
     {
         private readonly IExerciseService _exerciseService;
@@ -17,6 +17,12 @@ namespace FitnessTracker.Controllers
             _exerciseService = exerciseService;
         }
         [HttpGet]
+        public async Task<IActionResult> GetExercises()
+        {
+            var ex = await _exerciseService.GetExercises();
+            return Ok(ex);
+        }
+        [HttpGet("{id}")]
         public async Task<IActionResult> GetExerciseById(int id)
         {
             var exercise = await _exerciseService.GetExerciseById(id);
