@@ -29,12 +29,23 @@ namespace FitnessTracker.Services
             await _context.SaveChangesAsync();
         }
 
+        public async Task DeleteExercise(int id)
+        {
+            var exer = await _context.Exercises.FirstOrDefaultAsync(e => e.Id == id);
+            if(exer == null)
+            {
+                throw new KeyNotFoundException("The Exercise was not found");
+            }
+            _context.Exercises.Remove(exer);
+            await _context.SaveChangesAsync();  
+        }
+
         public async Task<ExerciseDto> GetExerciseById(int id)
             {
                 var exercise = await _context.Exercises.FirstOrDefaultAsync(e => e.Id == id);
                 if (exercise == null) {
-                    throw new Exception("The exercise does not exist");
-                }
+                    throw new KeyNotFoundException("The Exercise was not found");
+            }
                 var toReturn = new ExerciseDto
                 (
                      exercise.Name,
@@ -46,8 +57,18 @@ namespace FitnessTracker.Services
 
         public async Task<List<ReturnExerciseDto>> GetExercises(ExerciseQueryDto dto)
         {
-            var allExercises = await _context.Exercises
+            var query = _context.Exercises
                 .AsNoTracking()
+                .AsQueryable();
+            if (!string.IsNullOrWhiteSpace(dto.Search))
+            {
+                query = query.Where(e => e.Name.Contains(dto.Search));
+            }
+            if (!string.IsNullOrWhiteSpace(dto.MuscleGroup)) {
+                query = query.Where(e => e.MuscleGroup == dto.MuscleGroup);
+            }
+
+            var allExercises = await query
                 .OrderBy(e => e.MuscleGroup)
                 .Skip((dto.Page - 1) * dto.PageSize)
                 .Take(dto.PageSize)
@@ -59,6 +80,24 @@ namespace FitnessTracker.Services
                 e.IsBodyweight
                 )).ToList();
             return results;
+        }
+
+        public async Task<ReturnExerciseDto> UpdateExercise(int id, ExerciseDto dto)
+        {
+            var exer = await _context.Exercises.FirstOrDefaultAsync(e => e.Id == id);
+            if (exer == null)
+            {
+                throw new Exception("The exercise does not exist");
+            }
+            exer.Name = dto.Name;
+            exer.MuscleGroup = dto.MuscleGroup;
+            exer.IsBodyweight = dto.IsBodyweight;
+            await _context.SaveChangesAsync();
+            return new ReturnExerciseDto(
+                id,
+                dto.Name,
+                dto.MuscleGroup,
+                dto.IsBodyweight);
         }
     }
 }

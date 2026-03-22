@@ -9,6 +9,7 @@ namespace FitnessTracker.Services.Interfaces
         Task CreateExercise(CreateExerciseDto exercise);
         Task<List<ReturnExerciseDto>> GetExercises(ExerciseQueryDto dto);
         Task<ExerciseDto> GetExerciseById(int id);
-
+        Task DeleteExercise(int id);
+        Task<ReturnExerciseDto> UpdateExercise(int id, ExerciseDto dto);
     }
 }

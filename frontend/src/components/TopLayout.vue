@@ -5,12 +5,16 @@
       <div class="logo">Fitness Tracker</div>
       <nav class="nav-links">
         <router-link to="/">Home</router-link>
-        <router-link to="/dashboard">Dashboard</router-link>
-        <router-link to="/workouts">Workouts</router-link>
-        <router-link to="/workouts/new">New Workout</router-link>
-        <router-link to="/exercises">Exercises</router-link>
-        <router-link to="/login">Login</router-link>
-        <router-link to="/register"> Register</router-link>
+        <template v-if="isLoggedIn">
+          <router-link to="/dashboard">Dashboard</router-link>
+          <router-link to="/workouts">Workouts</router-link>
+          <router-link to="/workouts/new">New Workout</router-link>
+          <router-link to="/exercises">Exercises</router-link>
+        </template>
+        <template v-else>
+          <router-link to="/login">Login</router-link>
+          <router-link to="/register"> Register</router-link>
+        </template>
       </nav>
     </header>
 
@@ -21,7 +25,10 @@
   </div>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { useAuth } from '@/stores/auth'
+const { isLoggedIn, logout } = useAuth()
+</script>
 
 <style scoped>
 .layout {

@@ -25,23 +25,31 @@
     </div>
   </TopLayout>
 </template>
-
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import TopLayout from '../components/TopLayout.vue'
+import { getToken } from '@/services/authService'
 
-// Define types
 interface Workout {
   id: number
   name: string
   date: string
 }
 
-// Reactive data
 const stats = ref({ workouts: 0, exercises: 0, weekly: 0 })
 const recent = ref<Workout[]>([])
 
+const router = useRouter()
+
 onMounted(() => {
+  const token = getToken()
+  if (!token) {
+    router.push('/login') // 🔥 redirect if not logged in
+    return
+  }
+
+  // Mock stats (replace with API call later)
   stats.value = { workouts: 15, exercises: 42, weekly: 4 }
   recent.value = [
     { id: 1, name: 'Push Day', date: '2026-02-17' },

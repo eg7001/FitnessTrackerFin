@@ -1,40 +1,34 @@
 <script lang="ts" setup>
-// =============================
-// Imports
-// =============================
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Workout } from '@/types/workout'
 import { getWorkouts } from '@/services/workoutService'
 import TopLayout from '@/components/TopLayout.vue'
+import { getToken } from '@/services/authService' // 👈 new
 
-// =============================
-// Reactive State
-// =============================
 const workouts = ref<Workout[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-// Router for navigation (optional, for programmatic navigation)
 const router = useRouter()
 
-// =============================
-// Helper Functions
-// =============================
 const formatDate = (dateStr: string): string => {
   const d = new Date(dateStr)
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString()
 }
 
-// =============================
-// Fetch Workouts on Mount
-// =============================
 onMounted(async () => {
+  const token = getToken() // 🔥 check if logged in
+  if (!token) {
+    router.push('/login') // redirect to login if not
+    return
+  }
+
   loading.value = true
   error.value = null
   try {
     workouts.value = await getWorkouts()
-    console.log('Fetched workouts:', workouts.value) // Debug
+    console.log('Fetched workouts:', workouts.value)
   } catch (err: any) {
     error.value = err.response?.data?.message || err.message || 'Failed to load workouts'
   } finally {

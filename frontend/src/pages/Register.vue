@@ -1,9 +1,9 @@
 <template>
   <TopLayout>
     <div class="register-container">
-      <h1>Login</h1>
+      <h1>Register</h1>
 
-      <form @submit.prevent="handleLogin">
+      <form @submit.prevent="handleRegister">
         <div class="form-group">
           <label>Email</label>
           <input v-model="email" type="email" required />
@@ -15,7 +15,7 @@
         </div>
 
         <button type="submit" :disabled="loading">
-          {{ loading ? 'Logging in...' : 'Login' }}
+          {{ loading ? 'Registering...' : 'Register' }}
         </button>
 
         <p v-if="error" class="error">{{ error }}</p>
@@ -28,7 +28,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import TopLayout from '../components/TopLayout.vue'
-import { login } from '../services/authService'
+import { register } from '../services/authService'
 
 const email = ref('')
 const password = ref('')
@@ -37,15 +37,17 @@ const error = ref('')
 
 const router = useRouter()
 
-async function handleLogin() {
+async function handleRegister() {
   error.value = ''
   loading.value = true
 
   try {
-    await login(email.value, password.value)
-    router.push('/dashboard')
+    await register(email.value, password.value)
+
+    // 👉 after register, go to login
+    router.push('/login')
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Invalid email or password'
+    error.value = err.response?.data?.message || 'Registration failed'
   } finally {
     loading.value = false
   }
@@ -53,7 +55,7 @@ async function handleLogin() {
 </script>
 
 <style scoped>
-.login-container {
+.register-container {
   max-width: 400px;
 }
 

@@ -1,5 +1,6 @@
 ﻿using FitnessTracker.DTOs.Exercise;
 using FitnessTracker.DTOs.QueryObject;
+using FitnessTracker.DTOs.Workout;
 using FitnessTracker.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -36,6 +37,17 @@ namespace FitnessTracker.Controllers
             await _exerciseService.CreateExercise(createExerciseDto);
             return Ok("Exercise created successfully");
             
+        }
+        [HttpPut]
+        public async Task<IActionResult> UpdateExercise([FromRoute]int id,[FromBody]ExerciseDto dto)
+        {
+            await _exerciseService.UpdateExercise(id, dto);
+            return Ok("The Exercise has been updated");
+        }
+        [HttpDelete]
+        public async Task<IActionResult> DeleteExerciseById(int id) { 
+            await _exerciseService.DeleteExercise(id);
+            return NoContent();
         }
         
     }

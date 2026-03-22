@@ -30,6 +30,9 @@ import { useRouter } from 'vue-router'
 import TopLayout from '../components/TopLayout.vue'
 import { login } from '../services/authService'
 
+import { useAuth } from '@/stores/auth'
+const { setToken } = useAuth()
+
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
@@ -42,7 +45,8 @@ async function handleLogin() {
   loading.value = true
 
   try {
-    await login(email.value, password.value)
+    const res = await login(email.value, password.value)
+    setToken(res.accessToken)
     router.push('/dashboard')
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Invalid email or password'
