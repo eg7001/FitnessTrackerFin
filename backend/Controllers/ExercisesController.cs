@@ -1,4 +1,5 @@
 ﻿using FitnessTracker.DTOs.Exercise;
+using FitnessTracker.DTOs.QueryObject;
 using FitnessTracker.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -17,9 +18,9 @@ namespace FitnessTracker.Controllers
             _exerciseService = exerciseService;
         }
         [HttpGet]
-        public async Task<IActionResult> GetExercises()
+        public async Task<IActionResult> GetExercises([FromQuery]ExerciseQueryDto dto)
         {
-            var ex = await _exerciseService.GetExercises();
+            var ex = await _exerciseService.GetExercises(dto);
             return Ok(ex);
         }
         [HttpGet("{id}")]

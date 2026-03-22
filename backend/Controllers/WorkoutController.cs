@@ -1,4 +1,5 @@
 ﻿using FitnessTracker.DTOs.Exercise;
+using FitnessTracker.DTOs.QueryObject;
 using FitnessTracker.DTOs.Set;
 using FitnessTracker.DTOs.Workout;
 using FitnessTracker.DTOs.WorkoutExercise;
@@ -33,11 +34,9 @@ namespace FitnessTracker.Controllers
         }
         //Get Workouts
         [HttpGet]
-        public async Task<IActionResult> GetWorkouts(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetWorkouts([FromQuery]PaginationDto dto)
         {
-            var workouts = await _workoutService.GetUserWorkouts(GetUserGuid(),page, pageSize);
+            var workouts = await _workoutService.GetUserWorkouts(GetUserGuid(),dto);
             return Ok(workouts);
         }
         [HttpGet("{workoutId}")]

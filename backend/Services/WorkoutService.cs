@@ -1,5 +1,6 @@
 ﻿using FitnessTracker.DbContext;
 using FitnessTracker.DTOs.Exercise;
+using FitnessTracker.DTOs.QueryObject;
 using FitnessTracker.DTOs.Set;
 using FitnessTracker.DTOs.Workout;
 using FitnessTracker.DTOs.WorkoutExercise;
@@ -20,16 +21,15 @@ namespace FitnessTracker.Services
         }
         public async Task<List<WorkoutDto>> GetUserWorkouts(
              Guid userId,
-             int page = 1,
-             int pageSize = 10)
+             PaginationDto dto)
         {
             // Step 1: Query the database with proper Includes
             var workouts = await _context.Workouts
                 .AsNoTracking()
                 .Where(w => w.UserId == userId) // Only the current user's workouts
                 .OrderByDescending(w => w.Date) // Latest first
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
+                .Skip((dto.Page - 1) * dto.PageSize)
+                .Take(dto.PageSize)
                 .Include(w => w.WorkoutExercises)           // Include the join table
                     .ThenInclude(we => we.Exercise)        // Include Exercise info
                 .Include(w => w.WorkoutExercises)

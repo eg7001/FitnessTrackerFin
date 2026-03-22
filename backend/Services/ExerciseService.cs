@@ -1,5 +1,6 @@
 ﻿using FitnessTracker.DbContext;
 using FitnessTracker.DTOs.Exercise;
+using FitnessTracker.DTOs.QueryObject;
 using FitnessTracker.DTOs.Workout;
 using FitnessTracker.Models;
 using FitnessTracker.Services.Interfaces;
@@ -43,11 +44,13 @@ namespace FitnessTracker.Services
                 return toReturn;
         }
 
-        public async Task<List<ReturnExerciseDto>> GetExercises()
+        public async Task<List<ReturnExerciseDto>> GetExercises(ExerciseQueryDto dto)
         {
             var allExercises = await _context.Exercises
                 .AsNoTracking()
                 .OrderBy(e => e.MuscleGroup)
+                .Skip((dto.Page - 1) * dto.PageSize)
+                .Take(dto.PageSize)
                 .ToListAsync();
             var results = allExercises.Select(e => new ReturnExerciseDto(
                 e.Id,
