@@ -74,8 +74,8 @@ onMounted(async () => {
 
         <ul v-else>
           <li v-for="we in workout.exercises" :key="we.id">
-            <strong>{{ we.exercise.name }}</strong>
-            <em v-if="we.exercise.muscleGroup"> — {{ we.exercise.muscleGroup }}</em>
+            <strong>{{ we.exerciseName }}</strong>
+            <em v-if="we.muscleGroup"> — {{ we.muscleGroup }}</em>
 
             <ul>
               <li v-for="s in we.sets" :key="s.id">{{ formatSet(s) }}</li>

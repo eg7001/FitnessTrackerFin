@@ -14,7 +14,7 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config
+    const originalRequest = error.config as any
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
@@ -28,6 +28,7 @@ api.interceptors.response.use(
         const newToken = res.data.accessToken
         localStorage.setItem('token', newToken)
 
+        originalRequest.headers = originalRequest.headers || {}
         originalRequest.headers['Authorization'] = `Bearer ${newToken}`
         return api(originalRequest)
       } catch (err) {

@@ -9,3 +9,12 @@ export async function getWorkoutById(id: string): Promise<Workout> {
   const res = await api.get(`/workouts/${id}`)
   return res.data
 }
+
+export async function createWorkout(name: string, date?: string) {
+  const response = await api.post('/workouts', {
+    name,
+    date,
+  })
+
+  return response.data
+}

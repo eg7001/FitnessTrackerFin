@@ -11,6 +11,8 @@ import NotFound from '../pages/NotFound.vue'
 import WorkoutDetail from '@/pages/WorkoutDetail.vue'
 import ExerciseForm from '@/pages/ExerciseForm.vue'
 import Register from '@/pages/Register.vue'
+
+import { useAuth } from '@/stores/auth'
 const routes: Array<RouteRecordRaw> = [
   { path: '/', component: Home },
 
@@ -68,11 +70,14 @@ const router = createRouter({
 /**
  * 🔐 Navigation Guard
  */
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
 
-  if (to.meta.requiresAuth && !token) {
+router.beforeEach((to, from, next) => {
+  const { token } = useAuth()
+
+  if (to.meta.requiresAuth && !token.value) {
     next('/login')
+  } else if (to.meta.guestOnly && token.value) {
+    next('/dashboard')
   } else {
     next()
   }

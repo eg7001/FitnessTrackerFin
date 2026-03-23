@@ -10,6 +10,7 @@
           <router-link to="/workouts">Workouts</router-link>
           <router-link to="/workouts/new">New Workout</router-link>
           <router-link to="/exercises">Exercises</router-link>
+          <button @click="logout">Logout</button>
         </template>
         <template v-else>
           <router-link to="/login">Login</router-link>
@@ -56,7 +57,16 @@ const { isLoggedIn, logout } = useAuth()
 .nav-links a {
   margin-left: 25px;
   text-decoration: none;
-  color: white;
+  color: rgb(255, 255, 255);
+  font-size: 16px;
+}
+
+.nav-links button {
+  margin-left: 17px;
+  text-decoration: none;
+  border: 0;
+  color: rgb(255, 255, 255);
+  background-color: #1f2937;
   font-size: 16px;
 }
 

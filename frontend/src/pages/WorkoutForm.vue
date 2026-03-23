@@ -1,103 +1,88 @@
-<script lang="ts" setup>
-// =============================
-// Imports
-// =============================
+<template>
+  <TopLayout>
+    <div class="form-container">
+      <h1>Create Workout</h1>
+
+      <form @submit.prevent="handleSubmit">
+        <!-- Name -->
+        <div class="form-group">
+          <label>Workout Name</label>
+          <input v-model="name" required />
+        </div>
+
+        <!-- Date -->
+        <div class="form-group">
+          <label>Date</label>
+          <input v-model="date" type="datetime-local" />
+        </div>
+
+        <!-- Submit -->
+        <button :disabled="loading">
+          {{ loading ? 'Creating...' : 'Create Workout' }}
+        </button>
+
+        <!-- Error -->
+        <p v-if="error" class="error">{{ error }}</p>
+      </form>
+    </div>
+  </TopLayout>
+</template>
+
+<script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import type { Workout } from '@/types/workout'
-import api from '@/services/api'
 import TopLayout from '@/components/TopLayout.vue'
-
-// =============================
-// Reactive State
-// =============================
-const router = useRouter()
+import { createWorkout } from '@/services/workoutService'
 
 const name = ref('')
-const date = ref(new Date().toISOString().slice(0, 16)) // YYYY-MM-DDTHH:mm
+const date = ref('')
 const loading = ref(false)
-const error = ref<string | null>(null)
+const error = ref('')
 
-// =============================
-// Submit Handler
-// =============================
-const submitForm = async () => {
-  if (!name.value) {
-    error.value = 'Workout name is required'
-    return
-  }
+const router = useRouter()
 
+async function handleSubmit() {
+  error.value = ''
   loading.value = true
-  error.value = null
 
   try {
-    const payload: Partial<Workout> = {
-      name: name.value,
-      date: new Date(date.value).toISOString(),
-      exercises: [], // Start empty; user can add later
-    }
+    await createWorkout(name.value, date.value || undefined)
 
-    const res = await api.post('/workouts', payload)
-    console.log('Created workout:', res.data)
-
-    // Navigate to workouts list or detail
+    // 🔥 redirect after success
     router.push('/workouts')
   } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || 'Failed to create workout'
+    error.value = err.response?.data?.message || 'Failed to create workout'
   } finally {
     loading.value = false
   }
 }
 </script>
 
-<template>
-  <TopLayout>
-    <div class="workout-form-page">
-      <h1>Create New Workout</h1>
-
-      <p v-if="error" class="error">{{ error }}</p>
-
-      <form @submit.prevent="submitForm">
-        <div class="form-group">
-          <label for="name">Workout Name</label>
-          <input type="text" id="name" v-model="name" placeholder="e.g. Chest & Back" required />
-        </div>
-
-        <div class="form-group">
-          <label for="date">Date & Time</label>
-          <input type="datetime-local" id="date" v-model="date" required />
-        </div>
-
-        <button type="submit" :disabled="loading">
-          {{ loading ? 'Creating...' : 'Create Workout' }}
-        </button>
-      </form>
-    </div>
-  </TopLayout>
-</template>
-
 <style scoped>
-.workout-form-page {
-  margin: 0 auto;
+.form-container {
+  max-width: 400px;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 15px;
 }
 
 input {
   width: 100%;
-  padding: 0.5rem;
-  margin-top: 0.25rem;
+  padding: 8px;
 }
 
 button {
-  padding: 0.5rem 1rem;
+  width: 100%;
+  padding: 10px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
 }
 
 .error {
   color: red;
-  font-weight: bold;
-  margin-bottom: 1rem;
+  margin-top: 10px;
 }
 </style>

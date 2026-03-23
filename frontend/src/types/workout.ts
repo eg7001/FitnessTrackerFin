@@ -13,15 +13,11 @@ export interface WorkoutExercise {
   id: number
   workoutId: string
   exerciseId: number
-  exercise: {
-    id: number
-    name: string
-    muscleGroup?: string
-    isBodyweight: boolean
-  }
+  exerciseName: string // moved from inside `exercise`
+  muscleGroup?: string // moved from inside `exercise`
+  isBodyweight: boolean // moved from inside `exercise`
   sets: ExerciseSet[]
 }
-
 // Workout contains all exercises
 export interface Workout {
   id: string
