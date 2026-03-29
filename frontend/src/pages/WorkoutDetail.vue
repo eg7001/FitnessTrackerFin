@@ -1,96 +1,153 @@
 <script lang="ts" setup>
-// =============================
-// Imports
-// =============================
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import type { Workout, WorkoutExercise, ExerciseSet } from '@/types/workout'
-import { getWorkoutById } from '@/services/workoutService'
 import TopLayout from '@/components/TopLayout.vue'
+import api from '@/services/api'
+
+// ✅ USE YOUR TYPES
+import type { Workout, ExerciseSet } from '@/types/workout'
 
 // =============================
-// Reactive State
+// State
 // =============================
 const workout = ref<Workout | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
+const newExerciseName = ref('')
+const newMuscleGroup = ref('')
+
 // =============================
-// Get route param safely
+// Route
 // =============================
 const route = useRoute()
-const workoutId = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id
-
-if (!workoutId) {
-  throw new Error('No workout ID found in route params')
-}
+const workoutId = route.params.id as string
 
 // =============================
-// Helper Functions
+// Fetch workout
 // =============================
-
-// Convert ISO date string to human-readable
-const formatDate = (dateStr: string): string => {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString()
-}
-
-// Format a single set
-const formatSet = (s: ExerciseSet): string =>
-  `Reps: ${s.reps}, Weight: ${s.weight}, Failure: ${s.isFailure ? 'Yes' : 'No'}`
-
-// =============================
-// Fetch Workout on Mount
-// =============================
-onMounted(async () => {
-  loading.value = true
-  error.value = null
+async function fetchWorkout() {
   try {
-    workout.value = await getWorkoutById(workoutId)
+    loading.value = true
+    const res = await api.get(`/workouts/${workoutId}`)
+    workout.value = res.data
   } catch (err: any) {
-    error.value = err.response?.data?.message || err.message || 'Failed to load workout'
+    error.value = err.message || 'Failed to load'
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(fetchWorkout)
+
+// =============================
+// Add Exercise
+// =============================
+async function addExercise() {
+  if (!newExerciseName.value) return
+
+  await api.post(`/workouts/${workoutId}/exercises`, {
+    exerciseName: newExerciseName.value,
+    muscleGroup: newMuscleGroup.value,
+  })
+
+  newExerciseName.value = ''
+  newMuscleGroup.value = ''
+
+  await fetchWorkout()
+}
+
+// =============================
+// Add Set
+// =============================
+async function addSet(exerciseId: number) {
+  await api.post(`/workout-exercises/${exerciseId}/sets`, {
+    reps: 10,
+    weight: 50,
+    isFailure: false,
+  })
+
+  await fetchWorkout()
+}
+
+// =============================
+// Delete Set
+// =============================
+async function deleteSet(setId: number) {
+  await api.delete(`/sets/${setId}`)
+  await fetchWorkout()
+}
+
+// =============================
+// Helpers
+// =============================
+const formatDate = (dateStr: string) => {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString()
+}
+const formatSet = (s: ExerciseSet) => {
+  return `Reps: ${s.reps}, Weight: ${s.weight}, Failure: ${s.isFailure ? 'Yes' : 'No'}`
+}
 </script>
 
 <template>
   <TopLayout>
     <div class="workout-detail-page">
       <!-- Loading -->
-      <p v-if="loading">Loading workout...</p>
+      <p v-if="loading">Loading...</p>
 
       <!-- Error -->
-      <p v-else-if="error" class="error">{{ error }}</p>
+      <p v-else-if="error">{{ error }}</p>
 
-      <!-- Workout Content -->
+      <!-- ✅ ONLY render when workout EXISTS -->
       <div v-else-if="workout">
         <h1>{{ workout.name }}</h1>
-        <p>Date: {{ formatDate(workout.date) }}</p>
+        <p>{{ formatDate(workout.date) }}</p>
 
-        <h2>Exercises</h2>
-        <div v-if="workout.exercises.length === 0">No exercises in this workout.</div>
+        <!-- ADD EXERCISE -->
+        <div class="add-exercise">
+          <input v-model="newExerciseName" placeholder="Exercise name" />
+          <input v-model="newMuscleGroup" placeholder="Muscle group" />
+          <button @click="addExercise">Add</button>
+        </div>
 
-        <ul v-else>
+        <!-- ✅ SAFE access -->
+        <ul>
           <li v-for="we in workout.exercises" :key="we.id">
             <strong>{{ we.exerciseName }}</strong>
-            <em v-if="we.muscleGroup"> — {{ we.muscleGroup }}</em>
+            <span v-if="we.muscleGroup"> ({{ we.muscleGroup }})</span>
+
+            <button @click="addSet(we.id)">Add Set</button>
 
             <ul>
-              <li v-for="s in we.sets" :key="s.id">{{ formatSet(s) }}</li>
+              <li v-for="s in we.sets" :key="s.id">
+                {{ s.reps }} reps / {{ s.weight }}kg
+                <button @click="deleteSet(s.id)">❌</button>
+              </li>
             </ul>
           </li>
         </ul>
       </div>
 
       <!-- Fallback -->
-      <p v-else>No workout data found.</p>
+      <p v-else>No workout found</p>
     </div>
   </TopLayout>
 </template>
 
 <style scoped>
+.add-exercise {
+  margin-bottom: 15px;
+}
+
+.add-exercise input {
+  margin-right: 10px;
+  padding: 5px;
+}
+
+button {
+  margin-left: 5px;
+}
 .workout-detail-page {
   max-width: 700px;
   margin: 0 auto;

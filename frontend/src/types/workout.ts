@@ -8,17 +8,16 @@ export interface ExerciseSet {
   isFailure: boolean
 }
 
-// WorkoutExercise uses ExerciseSet[]
 export interface WorkoutExercise {
   id: number
   workoutId: string
   exerciseId: number
-  exerciseName: string // moved from inside `exercise`
-  muscleGroup?: string // moved from inside `exercise`
+  exerciseName: string
+  muscleGroup?: string
   isBodyweight: boolean // moved from inside `exercise`
   sets: ExerciseSet[]
 }
-// Workout contains all exercises
+
 export interface Workout {
   id: string
   name: string
