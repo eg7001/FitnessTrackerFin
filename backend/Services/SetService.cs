@@ -46,7 +46,7 @@ namespace FitnessTracker.Services
                    s.Id == setId &&
                    s.WorkoutExercise.Workout.UserId == userId);
 
-            if (set != null)
+            if (set == null)
             {
                 throw new UnauthorizedAccessException("No");
             }

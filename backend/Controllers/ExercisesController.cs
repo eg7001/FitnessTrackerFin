@@ -10,7 +10,7 @@ namespace FitnessTracker.Controllers
 {
     [Route("api/exercises")]
     [ApiController]
-        [Authorize]
+    [Authorize]
     public class ExercisesController : ControllerBase
     {
         private readonly IExerciseService _exerciseService;
