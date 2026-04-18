@@ -173,34 +173,54 @@ async function addExercise() {
 // =============================
 // Add Set (OPTIMISTIC)
 // =============================
-async function addSet(exerciseId: number) {
+async function addSet(exercise: any) {
   if (!workout.value) return
 
-  const exercise = workout.value.exercises.find((e) => e.id === exerciseId)
-  if (!exercise) return
+  console.log('Exercise passed:', exercise)
+
+  if (!exercise.id) {
+    console.error('❌ Missing workoutExerciseId', exercise)
+    return
+  }
 
   const tempId = Date.now()
 
-  const optimisticSet: ExerciseSet = {
+  const lastSet = exercise.sets[exercise.sets.length - 1]
+
+  const newSet = lastSet
+    ? {
+        reps: lastSet.reps,
+        weight: lastSet.weight,
+        isFailure: false,
+      }
+    : {
+        reps: 10,
+        weight: 20,
+        isFailure: false,
+      }
+
+  const optimisticSet = {
     id: tempId,
-    reps: 10,
-    weight: 50,
-    isFailure: false,
+    ...newSet,
   }
 
   exercise.sets.push(optimisticSet)
 
   try {
-    const res = await api.post(`/workout-exercises/${exerciseId}/sets`, optimisticSet)
-
+    const res = await api.post(`/workout-exercises/${exercise.id}/sets`, {
+      reps: Number(newSet.reps),
+      weight: Number(newSet.weight),
+      isFailure: Boolean(newSet.isFailure),
+    })
     const saved = res.data
 
-    const index = exercise.sets.findIndex((s) => s.id === tempId)
+    const index = exercise.sets.findIndex((s: ExerciseSet) => s.id === tempId)
     if (index !== -1) {
       exercise.sets[index] = saved
     }
   } catch (err) {
-    exercise.sets = exercise.sets.filter((s) => s.id !== tempId)
+    console.error('❌ Failed to add set', err)
+    exercise.sets = exercise.sets.filter((s: ExerciseSet) => s.id !== tempId)
   }
 }
 
@@ -302,8 +322,7 @@ const formatSet = (s: ExerciseSet) => {
             <strong>{{ we.exerciseName }}</strong>
             <span v-if="we.muscleGroup"> ({{ we.muscleGroup }})</span>
 
-            <button @click="addSet(we.id)">Add Set</button>
-
+            <button @click="addSet(we)">Add Set</button>
             <ul>
               <li v-for="s in we.sets || []" :key="s.id" class="set-row">
                 <input

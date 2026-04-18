@@ -23,8 +23,8 @@ namespace FitnessTracker.Controllers
         [HttpPost("/api/workout-exercises/{workoutExerciseId}/sets")]
         public async Task<IActionResult> AddSet(
             Guid workoutId,
-            int workoutExerciseId,
-            AddSetDto dto)
+            [FromRoute]int workoutExerciseId,
+            [FromBody]AddSetDto dto)
         {
             await _setService.AddSetToWorkoutExercise(GetUserGuid(), workoutExerciseId, dto);
             return NoContent();
