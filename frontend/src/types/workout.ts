@@ -1,6 +1,5 @@
 // src/types/workout.ts
 
-// ✅ Define ExerciseSet as its own interface
 export interface ExerciseSet {
   id: number
   reps: number
@@ -14,7 +13,7 @@ export interface WorkoutExercise {
   exerciseId: number
   exerciseName: string
   muscleGroup?: string
-  isBodyweight: boolean // moved from inside `exercise`
+  isBodyweight: boolean
   sets: ExerciseSet[]
 }
 

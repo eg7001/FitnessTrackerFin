@@ -4,12 +4,8 @@ import { useRoute } from 'vue-router'
 import TopLayout from '@/components/TopLayout.vue'
 import api from '@/services/api'
 
-// ✅ USE YOUR TYPES
 import type { Workout, ExerciseSet } from '@/types/workout'
 
-// =============================
-// State
-// =============================
 const workout = ref<Workout | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -52,9 +48,7 @@ const groupedExercises = computed(() => {
 
   return groups
 })
-// =============================
-// Route
-// =============================
+
 const route = useRoute()
 const workoutId = route.params.id as string
 
@@ -62,9 +56,6 @@ const workoutId = route.params.id as string
 const exercisesList = ref<any[]>([])
 const selectedExerciseId = ref<number | null>(null)
 
-// =============================
-// Fetch workout
-// =============================
 async function fetchWorkout() {
   try {
     loading.value = true
@@ -73,7 +64,6 @@ async function fetchWorkout() {
     const res = await api.get(`/workouts/${workoutId}`)
     const data = res.data
 
-    // Normalize exercises + sets safely
     const exercises = (data.exercises ?? data.workoutExercises ?? []).map((we: any) => ({
       id: we.id,
       workoutId: we.workoutId,
@@ -125,9 +115,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
 })
-// =============================
-// Add Exercise (OPTIMISTIC)
-// =============================
+
 async function addExercise() {
   if (!selectedExerciseId.value || !workout.value) return
 
@@ -147,7 +135,6 @@ async function addExercise() {
     sets: [],
   }
 
-  // ✅ instant UI
   workout.value.exercises.unshift(optimisticExercise)
 
   try {
@@ -161,18 +148,14 @@ async function addExercise() {
     if (index !== -1) {
       workout.value.exercises[index] = {
         ...optimisticExercise,
-        id: saved.id, // important
+        id: saved.id,
       }
     }
   } catch (err) {
-    // rollback
     workout.value.exercises = workout.value.exercises.filter((e) => e.id !== tempId)
   }
 }
 
-// =============================
-// Add Set (OPTIMISTIC)
-// =============================
 async function addSet(exercise: any) {
   if (!workout.value) return
 
@@ -224,9 +207,6 @@ async function addSet(exercise: any) {
   }
 }
 
-// =============================
-// Delete Set (OPTIMISTIC)
-// =============================
 async function deleteSet(setId: number) {
   if (!workout.value) return
 
@@ -253,7 +233,6 @@ async function deleteSet(setId: number) {
 }
 
 async function updateSet(set: any) {
-  // store previous state (for rollback)
   const prev = { ...set }
 
   try {
@@ -270,10 +249,6 @@ async function updateSet(set: any) {
   }
 }
 
-// =============================
-// Helpers
-// =============================
-
 const formatDate = (dateStr: string) => {
   const d = new Date(dateStr)
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString()
@@ -286,13 +261,10 @@ const formatSet = (s: ExerciseSet) => {
 <template>
   <TopLayout>
     <div class="workout-detail-page">
-      <!-- Loading -->
       <p v-if="loading">Loading...</p>
 
-      <!-- Error -->
       <p v-else-if="error">{{ error }}</p>
 
-      <!-- ✅ ONLY render when workout EXISTS -->
       <div v-else-if="workout">
         <h1>{{ workout.name }}</h1>
         <p>{{ formatDate(workout.date) }}</p>
@@ -316,7 +288,7 @@ const formatSet = (s: ExerciseSet) => {
         </div>
 
         <button @click="addExercise" :disabled="!selectedExerciseId">Add</button>
-        <!-- ✅ SAFE access -->
+
         <ul>
           <li v-for="we in workout.exercises || []" :key="we.id">
             <strong>{{ we.exerciseName }}</strong>
@@ -351,7 +323,6 @@ const formatSet = (s: ExerciseSet) => {
         </ul>
       </div>
 
-      <!-- Fallback -->
       <p v-else>No workout found</p>
     </div>
   </TopLayout>

@@ -2,7 +2,6 @@
   <TopLayout>
     <h1>Dashboard</h1>
 
-    <!-- STATS -->
     <div class="stats">
       <div class="card">
         <h3>Total Workouts</h3>
@@ -15,7 +14,6 @@
       </div>
     </div>
 
-    <!-- RECENT -->
     <div class="recent-workouts">
       <h2>Recent Workouts</h2>
 
@@ -70,15 +68,11 @@ onMounted(async () => {
     const data: Workout[] = await getWorkouts()
     workouts.value = data
 
-    // ✅ TOTAL WORKOUTS
     stats.value.workouts = data.length
 
-    // ✅ WEEKLY WORKOUTS
     const startOfWeek = getStartOfWeek()
-
     stats.value.weekly = data.filter((w) => new Date(w.date) >= startOfWeek).length
 
-    // ✅ RECENT WORKOUTS (last 5)
     recent.value = [...data]
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5)
