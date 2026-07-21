@@ -74,6 +74,17 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Make sure the "Admin" role exists before anyone tries to register into
+// it (AuthService assigns it to the first user who ever signs up).
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+    if (!await roleManager.RoleExistsAsync("Admin"))
+    {
+        await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
+    }
+}
+
 app.UseMiddleware<ExceptionMiddleware>();
 
 

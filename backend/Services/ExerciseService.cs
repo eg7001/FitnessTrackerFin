@@ -87,7 +87,7 @@ namespace FitnessTracker.Services
             var exer = await _context.Exercises.FirstOrDefaultAsync(e => e.Id == id);
             if (exer == null)
             {
-                throw new Exception("The exercise does not exist");
+                throw new KeyNotFoundException("The exercise does not exist");
             }
             exer.Name = dto.Name;
             exer.MuscleGroup = dto.MuscleGroup;

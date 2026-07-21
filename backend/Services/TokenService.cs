@@ -20,7 +20,7 @@ public class TokenService : ITokenService
         );
     }
 
-    public string CreateToken(AppUser user)
+    public string CreateToken(AppUser user, IEnumerable<string> roles)
     {
         var claims = new List<Claim>
     {
@@ -30,6 +30,14 @@ public class TokenService : ITokenService
         new Claim(ClaimTypes.Name, user.UserName!),
         new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
     };
+
+        // Role claims are what [Authorize(Roles = "...")] checks against on
+        // the token - without these, a user could be "Admin" in the
+        // database and still get 403'd on every admin-only endpoint.
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
 
         var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256);
 

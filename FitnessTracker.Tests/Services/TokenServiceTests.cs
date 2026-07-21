@@ -29,7 +29,7 @@ public class TokenServiceTests
         var sut = CreateSut();
         var user = new AppUser { Id = Guid.NewGuid(), Email = "test@example.com", UserName = "test@example.com" };
 
-        var token = sut.CreateToken(user);
+        var token = sut.CreateToken(user, Array.Empty<string>());
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         Assert.Equal("TestIssuer", jwt.Issuer);
@@ -44,11 +44,40 @@ public class TokenServiceTests
         var sut = CreateSut(expiresInMinutes: 30);
         var user = new AppUser { Id = Guid.NewGuid(), Email = "test@example.com", UserName = "test@example.com" };
 
-        var token = sut.CreateToken(user);
+        var token = sut.CreateToken(user, Array.Empty<string>());
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         var expectedExpiry = DateTime.UtcNow.AddMinutes(30);
         Assert.True(Math.Abs((jwt.ValidTo - expectedExpiry).TotalMinutes) < 1);
+    }
+
+    [Fact]
+    public void CreateToken_WhenRolesProvided_IncludesARoleClaimPerRole()
+    {
+        // [Authorize(Roles = "Admin")] on the Exercises endpoints checks
+        // ClaimTypes.Role on the token, not the database - if this claim
+        // is missing, an Admin user would still get 403'd everywhere.
+        var sut = CreateSut();
+        var user = new AppUser { Id = Guid.NewGuid(), Email = "test@example.com", UserName = "test@example.com" };
+
+        var token = sut.CreateToken(user, new[] { "Admin", "Member" });
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        var roleClaims = jwt.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value);
+        Assert.Contains("Admin", roleClaims);
+        Assert.Contains("Member", roleClaims);
+    }
+
+    [Fact]
+    public void CreateToken_WhenNoRoles_IncludesNoRoleClaims()
+    {
+        var sut = CreateSut();
+        var user = new AppUser { Id = Guid.NewGuid(), Email = "test@example.com", UserName = "test@example.com" };
+
+        var token = sut.CreateToken(user, Array.Empty<string>());
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        Assert.DoesNotContain(jwt.Claims, c => c.Type == System.Security.Claims.ClaimTypes.Role);
     }
 
     [Fact]

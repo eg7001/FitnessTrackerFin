@@ -143,16 +143,13 @@ public class ExerciseServiceTests
     }
 
     [Fact]
-    public async Task UpdateExercise_WhenNotFound_ThrowsException()
+    public async Task UpdateExercise_WhenNotFound_ThrowsKeyNotFoundException()
     {
-        // NOTE: unlike DeleteExercise/GetExerciseById, this path currently
-        // throws a bare Exception instead of KeyNotFoundException, so a
-        // caller can't distinguish "not found" from any other failure and
-        // the API will return a generic 500 instead of a 404. Documented
-        // here via the test rather than silently changed - worth fixing
-        // for consistency as a follow-up.
+        // Now consistent with DeleteExercise/GetExerciseById: the API
+        // returns a proper 404 instead of a generic 500 for this case.
         var sut = new ExerciseService(CreateContext());
 
-        await Assert.ThrowsAsync<Exception>(() => sut.UpdateExercise(999, new ExerciseDto("Name", null, false)));
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => sut.UpdateExercise(999, new ExerciseDto("Name", null, false)));
     }
 }

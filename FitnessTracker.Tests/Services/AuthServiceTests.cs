@@ -30,7 +30,11 @@ public class AuthServiceTests
     private static Mock<UserManager<AppUser>> CreateUserManagerMock()
     {
         var store = new Mock<IUserStore<AppUser>>();
-        return new Mock<UserManager<AppUser>>(store.Object, null, null, null, null, null, null, null, null);
+        var manager = new Mock<UserManager<AppUser>>(store.Object, null, null, null, null, null, null, null, null);
+        // Default: nobody has registered yet, so Register() treats the
+        // next signup as the first user unless a test overrides this.
+        manager.Setup(m => m.Users).Returns(new List<AppUser>().AsQueryable());
+        return manager;
     }
 
     // AuthService.Login/RefreshToken return `object` (an anonymous type).
@@ -81,6 +85,40 @@ public class AuthServiceTests
     }
 
     [Fact]
+    public async Task Register_WhenFirstUserToRegister_IsAssignedAdminRole()
+    {
+        // There's no admin UI, so the only way anyone ever becomes an
+        // Admin is by being the first person to ever sign up.
+        var userManager = CreateUserManagerMock();
+        userManager
+            .Setup(m => m.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
+        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext());
+
+        await sut.Register(new RegisterDto("first@example.com", "Password123!"));
+
+        userManager.Verify(m => m.AddToRoleAsync(It.IsAny<AppUser>(), "Admin"), Times.Once);
+    }
+
+    [Fact]
+    public async Task Register_WhenNotTheFirstUser_IsNotAssignedAdminRole()
+    {
+        var userManager = CreateUserManagerMock();
+        userManager.Setup(m => m.Users).Returns(new List<AppUser>
+        {
+            new AppUser { Id = Guid.NewGuid(), Email = "existing@example.com", UserName = "existing@example.com" }
+        }.AsQueryable());
+        userManager
+            .Setup(m => m.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
+        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext());
+
+        await sut.Register(new RegisterDto("second@example.com", "Password123!"));
+
+        userManager.Verify(m => m.AddToRoleAsync(It.IsAny<AppUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Login_WhenUserDoesNotExist_ThrowsKeyNotFoundException()
     {
         var userManager = CreateUserManagerMock();
@@ -112,8 +150,10 @@ public class AuthServiceTests
         userManager.Setup(m => m.FindByEmailAsync(user.Email!)).ReturnsAsync(user);
         userManager.Setup(m => m.CheckPasswordAsync(user, "correct")).ReturnsAsync(true);
 
+        userManager.Setup(m => m.GetRolesAsync(user)).ReturnsAsync(new List<string>());
+
         var tokenService = new Mock<ITokenService>();
-        tokenService.Setup(t => t.CreateToken(user)).Returns("access-token");
+        tokenService.Setup(t => t.CreateToken(user, It.IsAny<IEnumerable<string>>())).Returns("access-token");
         tokenService.Setup(t => t.GenerateRefreshToken()).Returns("refresh-token");
 
         var context = CreateContext();
@@ -197,7 +237,7 @@ public class AuthServiceTests
         await context.SaveChangesAsync();
 
         var tokenService = new Mock<ITokenService>();
-        tokenService.Setup(t => t.CreateToken(It.IsAny<AppUser>())).Returns("new-access-token");
+        tokenService.Setup(t => t.CreateToken(It.IsAny<AppUser>(), It.IsAny<IEnumerable<string>>())).Returns("new-access-token");
         tokenService.Setup(t => t.GenerateRefreshToken()).Returns("new-refresh-token");
 
         var sut = new AuthService(CreateUserManagerMock().Object, tokenService.Object, context);

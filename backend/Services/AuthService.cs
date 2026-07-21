@@ -23,6 +23,15 @@ namespace FitnessTracker.Services
 
         public async Task Register(RegisterDto dto)
         {
+            // Whoever signs up first becomes the catalog admin - there's no
+            // admin UI yet, so this is the only way anyone ever gets the
+            // "Admin" role. Everyone after the first user is a normal user.
+            // Synchronous by design: EF's async LINQ operators require an
+            // async query provider, which a plain mocked/in-memory
+            // IQueryable in tests won't have. A one-off check on a rare
+            // operation like registration doesn't need to be async here.
+            var isFirstUser = !_userManager.Users.Any();
+
             var user = new AppUser
             {
                 UserName = dto.Email,
@@ -36,6 +45,11 @@ namespace FitnessTracker.Services
                 var errors = result.Errors.Select(e => e.Description);
                 throw new InvalidOperationException(string.Join(", ", errors));
             }
+
+            if (isFirstUser)
+            {
+                await _userManager.AddToRoleAsync(user, "Admin");
+            }
         }
         public async Task<object> Login(LoginDto dto)
         {
@@ -47,7 +61,8 @@ namespace FitnessTracker.Services
             if (!valid)
                 throw new UnauthorizedAccessException("Invalid credentials");
 
-            var accessToken = _tokenService.CreateToken(user);
+            var roles = await _userManager.GetRolesAsync(user);
+            var accessToken = _tokenService.CreateToken(user, roles);
             var refreshToken = _tokenService.GenerateRefreshToken();
 
             var refreshTokenEntity = new RefreshToken
@@ -75,7 +90,8 @@ namespace FitnessTracker.Services
             if (storedToken == null || storedToken.IsRevoked || storedToken.ExpiresAt < DateTime.UtcNow)
                 throw new UnauthorizedAccessException("Invalid refresh token");
 
-            var newAccessToken = _tokenService.CreateToken(storedToken.User);
+            var roles = await _userManager.GetRolesAsync(storedToken.User);
+            var newAccessToken = _tokenService.CreateToken(storedToken.User, roles);
             var newRefreshToken = _tokenService.GenerateRefreshToken();
 
             // revoke old token

@@ -391,3 +391,6 @@ frontend/.vscode/*
 *.sln
 *.sw?
 
+# Local secrets for docker-compose (see .env.example for the template)
+.env
+
