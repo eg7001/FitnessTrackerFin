@@ -1,4 +1,5 @@
 ﻿using FitnessTracker.DbContext;
+using FitnessTracker.DTOs.Set;
 using FitnessTracker.DTOs.WorkoutExercise;
 using FitnessTracker.Models;
 using FitnessTracker.Services.Interfaces;
@@ -13,7 +14,7 @@ namespace FitnessTracker.Services
         {
             _context = context;
         }
-        public async Task AddExerciseToWorkout(
+        public async Task<WorkoutExerciseDto> AddExerciseToWorkout(
             Guid userId,
             Guid workoutId,
             AddWorkoutExerciseDto dto)
@@ -29,7 +30,7 @@ namespace FitnessTracker.Services
 
             if (exercise == null)
             {
-                throw new Exception("Exerise was not found");
+                throw new Exception("Exercise was not found");
             }
             // Check if the exercise is already added to this workout
             if (workout.WorkoutExercises.Any(we => we.ExerciseId == dto.ExerciseId))
@@ -42,6 +43,15 @@ namespace FitnessTracker.Services
 
             _context.WorkoutExercises.Add(workoutExercise);
             await _context.SaveChangesAsync();
+
+            return new WorkoutExerciseDto(
+                workoutExercise.Id,
+                exercise.Id,
+                exercise.Name,
+                exercise.MuscleGroup,
+                exercise.IsBodyweight,
+                new List<SetDto>()
+            );
         }
         public async Task DeleteWorkoutExercise(Guid userid, int workoutExercsieId)
         {

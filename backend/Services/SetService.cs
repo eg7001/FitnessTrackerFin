@@ -13,7 +13,7 @@ namespace FitnessTracker.Services
         {
             _context = context;
         }
-        public async Task AddSetToWorkoutExercise(
+        public async Task<SetDto> AddSetToWorkoutExercise(
             Guid userId,
             int workoutExerciseId,
             AddSetDto dto)
@@ -36,6 +36,8 @@ namespace FitnessTracker.Services
 
             _context.Sets.Add(set);
             await _context.SaveChangesAsync();
+
+            return new SetDto(set.Id, set.Reps, set.Weight, set.IsFailure);
         }
         public async Task DeleteSet(Guid userId, int setId)
         {

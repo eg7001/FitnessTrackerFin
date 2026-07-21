@@ -26,8 +26,8 @@ namespace FitnessTracker.Controllers
             [FromRoute]int workoutExerciseId,
             [FromBody]AddSetDto dto)
         {
-            await _setService.AddSetToWorkoutExercise(GetUserGuid(), workoutExerciseId, dto);
-            return NoContent();
+            var created = await _setService.AddSetToWorkoutExercise(GetUserGuid(), workoutExerciseId, dto);
+            return Ok(created);
         }
         [HttpPut("{setId}")]
         public async Task<IActionResult> UpdateSet(

@@ -38,14 +38,14 @@ namespace FitnessTracker.Controllers
             return Ok("Exercise created successfully");
             
         }
-        [HttpPut]
+        [HttpPut("{id}")]
         public async Task<IActionResult> UpdateExercise([FromRoute]int id,[FromBody]ExerciseDto dto)
         {
             await _exerciseService.UpdateExercise(id, dto);
             return Ok("The Exercise has been updated");
         }
-        [HttpDelete]
-        public async Task<IActionResult> DeleteExerciseById(int id) { 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteExerciseById(int id) {
             await _exerciseService.DeleteExercise(id);
             return NoContent();
         }

@@ -78,8 +78,8 @@ namespace FitnessTracker.Controllers
             Guid workoutId,
             AddWorkoutExerciseDto dto)
         {
-            await _workoutExerciseService.AddExerciseToWorkout(GetUserGuid(), workoutId, dto);
-            return NoContent();
+            var created = await _workoutExerciseService.AddExerciseToWorkout(GetUserGuid(), workoutId, dto);
+            return Ok(created);
         }
 
         // DELETE exercise
