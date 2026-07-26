@@ -113,5 +113,19 @@ namespace FitnessTracker.Services
                 refreshToken = newRefreshToken
             };
         }
+
+        public async Task Logout(string refreshToken)
+        {
+            // Idempotent: a missing/already-revoked token is not an error -
+            // the caller's goal (no valid session left) is already true.
+            var storedToken = await _context.RefreshTokens
+                .FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+
+            if (storedToken == null)
+                return;
+
+            storedToken.IsRevoked = true;
+            await _context.SaveChangesAsync();
+        }
     }
 }

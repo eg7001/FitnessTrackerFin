@@ -23,18 +23,16 @@ cd fitness-tracker
 
 ### 2. Create a `.env` file in the root
 
+Copy `.env.example` to `.env` and fill in real values:
+
 ```env
-POSTGRES_USER=postgres
 POSTGRES_PASSWORD=yourpassword
-POSTGRES_DB=fitnesstracker
-
 JWT_KEY=your-secret-key-at-least-32-chars
-JWT_ISSUER=FitnessTrackerAPI
-JWT_AUDIENCE=FitnessTrackerClient
-JWT_EXPIRES_IN_MINUTES=60
-
-CONNECTION_STRING=Host=db;Port=5432;Database=fitnesstracker;Username=postgres;Password=yourpassword
 ```
+
+(Postgres database/user, JWT issuer/audience/expiry, and the CORS-allowed
+origin are already set in `docker-compose.yml` — only the two secrets above
+need to be supplied.)
 
 ### 3. Start everything
 
@@ -42,14 +40,18 @@ CONNECTION_STRING=Host=db;Port=5432;Database=fitnesstracker;Username=postgres;Pa
 docker compose up --build
 ```
 
-- API → `http://localhost:5000`
-- Sca → `https://localhost:7008/scalar/`
-- Frontend → `http://localhost:5173`
+- Frontend → `http://localhost` (proxies `/api/*` to the backend)
+- Backend API → `http://localhost:8080`
+
+Scalar's interactive API docs (`/scalar/`) are only enabled in the
+Development environment, so they're not exposed by the Docker Compose
+setup. To use them, run the backend locally instead: `dotnet run` from
+`backend/`, then visit `https://localhost:7008/scalar/`.
 
 ### 4. Run migrations
 
 ```bash
-docker exec -it fitnessapi dotnet ef database update
+docker compose exec backend dotnet ef database update
 ```
 
 ---

@@ -1,18 +1,19 @@
+import axios from 'axios'
 import api from './api'
+import { useAuth } from '@/stores/auth'
+
+const { token, setToken: setStoreToken, logout: clearStoreToken } = useAuth()
 
 export async function login(email: string, password: string) {
   try {
     const response = await api.post('/auth/login', { email, password })
 
-    const token = response.data.accessToken
-    const refreshToken = response.data.refreshToken
+    const accessToken = response.data.accessToken
+    if (!accessToken) throw new Error('Access token is missing')
 
-    if (!token) throw new Error('Access token is missing')
+    setStoreToken(accessToken)
 
-    localStorage.setItem('token', token)
-    localStorage.setItem('refreshToken', refreshToken)
-
-    return { accessToken: token, refreshToken }
+    return { accessToken }
   } catch (err: any) {
     console.error('Login failed:', err.response?.data || err)
     throw err
@@ -31,15 +32,36 @@ export async function register(email: string, password: string) {
   }
 }
 
-export function logout() {
-  localStorage.removeItem('token')
-  localStorage.removeItem('refreshToken')
+export async function logout() {
+  try {
+    // Best-effort: revokes the refresh token and clears its cookie
+    // server-side. Even if this fails (network down, already expired),
+    // clearing the in-memory access token below still logs the user out
+    // locally.
+    await api.post('/auth/logout')
+  } catch (err) {
+    console.error('Logout request failed:', err)
+  } finally {
+    clearStoreToken()
+  }
 }
 
 export function getToken() {
-  return localStorage.getItem('token')
+  return token.value
 }
 
-export function getRefreshToken() {
-  return localStorage.getItem('refreshToken')
+export function setToken(newToken: string | null) {
+  setStoreToken(newToken)
+}
+
+// Exchanges the httpOnly refresh cookie for a new access token. Uses a bare
+// axios call (not the shared `api` instance) so a failed refresh can't
+// trigger api.ts's own 401 interceptor and recurse back into this function.
+export async function refreshAccessToken(): Promise<string> {
+  const res = await axios.post('/api/auth/refresh', null, { withCredentials: true })
+  const accessToken = res.data.accessToken
+  if (!accessToken) throw new Error('Access token is missing from refresh response')
+
+  setStoreToken(accessToken)
+  return accessToken
 }

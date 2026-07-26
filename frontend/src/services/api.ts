@@ -1,8 +1,12 @@
 import axios from 'axios'
-import { getToken, getRefreshToken, logout } from './authService'
+import { getToken, setToken, refreshAccessToken, logout } from './authService'
 
+// '/api' is same-origin: the Vite dev server proxies it to the backend in
+// dev, nginx proxies it in the Docker build. That keeps the refresh-token
+// cookie same-site and avoids CORS entirely for normal browser traffic.
 const api = axios.create({
-  baseURL: 'https://localhost:7008/api',
+  baseURL: '/api',
+  withCredentials: true,
 })
 
 api.interceptors.request.use((config) => {
@@ -20,13 +24,8 @@ api.interceptors.response.use(
       originalRequest._retry = true
 
       try {
-        const refreshToken = getRefreshToken()
-        if (!refreshToken) throw new Error('No refresh token available')
-
-        const res = await axios.post('https://localhost:7008/api/auth/refresh', { refreshToken })
-
-        const newToken = res.data.accessToken
-        localStorage.setItem('token', newToken)
+        const newToken = await refreshAccessToken()
+        setToken(newToken)
 
         originalRequest.headers = originalRequest.headers || {}
         originalRequest.headers['Authorization'] = `Bearer ${newToken}`

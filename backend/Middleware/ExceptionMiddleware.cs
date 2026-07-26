@@ -5,6 +5,18 @@ namespace FitnessTracker.Middleware
 {
     public class ExceptionMiddleware
     {
+        // Controller actions go through ASP.NET Core's own JSON formatter,
+        // which defaults to camelCase - this middleware serializes manually
+        // via JsonSerializer.Serialize, which defaults to PascalCase unless
+        // told otherwise. Without this, error bodies came back as
+        // {"Message": ...} while every frontend catch block reads
+        // err.response.data.message (lowercase), so the real error text
+        // never reached the UI - only the hardcoded fallback strings did.
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
         private readonly RequestDelegate _next;
         private readonly ILogger<ExceptionMiddleware> _logger;
         public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
@@ -65,7 +77,7 @@ namespace FitnessTracker.Middleware
                 TraceId = context.TraceIdentifier
             };
 
-            var json = JsonSerializer.Serialize(response);
+            var json = JsonSerializer.Serialize(response, JsonOptions);
 
             await context.Response.WriteAsync(json);
         }

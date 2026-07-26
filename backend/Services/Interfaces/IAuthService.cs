@@ -8,5 +8,6 @@ namespace FitnessTracker.Services.Interfaces
         Task Register(RegisterDto dto);
         Task<object> Login(LoginDto dto);
         Task<object> RefreshToken(TokenRefreshRequestDto dto);
+        Task Logout(string refreshToken);
     }
 }

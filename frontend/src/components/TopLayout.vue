@@ -27,8 +27,17 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { useAuth } from '@/stores/auth'
-const { isLoggedIn, logout } = useAuth()
+import { logout as logoutFromServer } from '@/services/authService'
+
+const { isLoggedIn } = useAuth()
+const router = useRouter()
+
+async function logout() {
+  await logoutFromServer()
+  router.push('/login')
+}
 </script>
 
 <style scoped>

@@ -253,4 +253,35 @@ public class AuthServiceTests
         var newToken = await context.RefreshTokens.SingleAsync(t => t.Token == "new-refresh-token");
         Assert.False(newToken.IsRevoked);
     }
+
+    [Fact]
+    public async Task Logout_WithValidToken_RevokesIt()
+    {
+        var context = CreateContext();
+        var user = new AppUser { Id = Guid.NewGuid(), Email = "test@example.com", UserName = "test@example.com" };
+        context.Users.Add(user);
+        context.RefreshTokens.Add(new RefreshToken
+        {
+            Token = "active-token",
+            UserId = user.Id,
+            ExpiresAt = DateTime.UtcNow.AddDays(1),
+            IsRevoked = false
+        });
+        await context.SaveChangesAsync();
+
+        var sut = new AuthService(CreateUserManagerMock().Object, Mock.Of<ITokenService>(), context);
+
+        await sut.Logout("active-token");
+
+        var token = await context.RefreshTokens.SingleAsync(t => t.Token == "active-token");
+        Assert.True(token.IsRevoked);
+    }
+
+    [Fact]
+    public async Task Logout_WithUnknownToken_DoesNotThrow()
+    {
+        var sut = new AuthService(CreateUserManagerMock().Object, Mock.Of<ITokenService>(), CreateContext());
+
+        await sut.Logout("does-not-exist");
+    }
 }

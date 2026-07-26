@@ -1,28 +1,60 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import api from '@/services/api'
-import { login, register, logout, getToken, getRefreshToken } from '@/services/authService'
 
-// We only care about authService's own logic here, so the real api.ts
-// (axios instance + interceptors) is replaced with a fake that just
-// records calls. api.ts's own interceptor behavior is tested separately
-// in api.spec.ts.
+// authService now delegates all token state to the auth store instead of
+// localStorage, so the store is faked here and asserted against directly.
+const { mockToken, mockSetToken, mockClearToken } = vi.hoisted(() => {
+  const mockToken = { value: null as string | null }
+  return {
+    mockToken,
+    mockSetToken: vi.fn((t: string | null) => {
+      mockToken.value = t
+    }),
+    mockClearToken: vi.fn(() => {
+      mockToken.value = null
+    }),
+  }
+})
+
+vi.mock('@/stores/auth', () => ({
+  useAuth: () => ({ token: mockToken, setToken: mockSetToken, logout: mockClearToken }),
+}))
+
+// api.ts (the shared axios instance) is faked so we only exercise
+// authService's own logic.
 vi.mock('@/services/api', () => ({
   default: {
     post: vi.fn(),
   },
 }))
 
+// refreshAccessToken deliberately uses a bare `axios.post`, not the shared
+// `api` instance (see the comment in authService.ts) — mocked separately.
+vi.mock('axios', () => ({
+  default: {
+    post: vi.fn(),
+  },
+}))
+
+import api from '@/services/api'
+import axios from 'axios'
+import {
+  login,
+  register,
+  logout,
+  getToken,
+  setToken,
+  refreshAccessToken,
+} from '@/services/authService'
+
 describe('authService', () => {
   beforeEach(() => {
-    localStorage.clear()
     vi.clearAllMocks()
+    mockToken.value = null
   })
 
   describe('login', () => {
-    it('stores both tokens and returns them on success', async () => {
-      vi.mocked(api.post).mockResolvedValue({
-        data: { accessToken: 'access-123', refreshToken: 'refresh-123' },
-      })
+    it('stores the access token and returns it on success', async () => {
+      vi.mocked(api.post).mockResolvedValue({ data: { accessToken: 'access-123' } })
 
       const result = await login('test@example.com', 'password')
 
@@ -30,9 +62,8 @@ describe('authService', () => {
         email: 'test@example.com',
         password: 'password',
       })
-      expect(result).toEqual({ accessToken: 'access-123', refreshToken: 'refresh-123' })
-      expect(localStorage.getItem('token')).toBe('access-123')
-      expect(localStorage.getItem('refreshToken')).toBe('refresh-123')
+      expect(result).toEqual({ accessToken: 'access-123' })
+      expect(mockSetToken).toHaveBeenCalledWith('access-123')
     })
 
     it('throws and stores nothing when the access token is missing from the response', async () => {
@@ -41,7 +72,7 @@ describe('authService', () => {
       await expect(login('test@example.com', 'password')).rejects.toThrow(
         'Access token is missing',
       )
-      expect(localStorage.getItem('token')).toBeNull()
+      expect(mockSetToken).not.toHaveBeenCalled()
     })
 
     it('propagates errors from the API', async () => {
@@ -52,10 +83,6 @@ describe('authService', () => {
   })
 
   describe('register', () => {
-    // Regression test: the backend's /auth/register endpoint does not return
-    // an access token (it just creates the account), and Register.vue
-    // redirects to /login afterward without needing one. register() must
-    // not throw just because there's no accessToken in the response.
     it('resolves without requiring a token in the response', async () => {
       vi.mocked(api.post).mockResolvedValue({ data: {} })
 
@@ -75,25 +102,60 @@ describe('authService', () => {
     })
   })
 
+  describe('logout', () => {
+    it('calls the logout endpoint and clears the store token', async () => {
+      vi.mocked(api.post).mockResolvedValue({})
+
+      await logout()
+
+      expect(api.post).toHaveBeenCalledWith('/auth/logout')
+      expect(mockClearToken).toHaveBeenCalled()
+    })
+
+    it('still clears the store token locally even if the request fails', async () => {
+      vi.mocked(api.post).mockRejectedValue(new Error('network down'))
+
+      await logout()
+
+      expect(mockClearToken).toHaveBeenCalled()
+    })
+  })
+
   describe('token helpers', () => {
-    it('getToken reads the access token from localStorage', () => {
-      localStorage.setItem('token', 'abc')
+    it('getToken reads the current value from the store', () => {
+      mockToken.value = 'abc'
       expect(getToken()).toBe('abc')
     })
 
-    it('getRefreshToken reads the refresh token from localStorage', () => {
-      localStorage.setItem('refreshToken', 'xyz')
-      expect(getRefreshToken()).toBe('xyz')
+    it('setToken writes through to the store', () => {
+      setToken('xyz')
+      expect(mockSetToken).toHaveBeenCalledWith('xyz')
+    })
+  })
+
+  describe('refreshAccessToken', () => {
+    it('exchanges the refresh cookie for a new access token and stores it', async () => {
+      vi.mocked(axios.post).mockResolvedValue({ data: { accessToken: 'refreshed-token' } })
+
+      const result = await refreshAccessToken()
+
+      expect(axios.post).toHaveBeenCalledWith('/api/auth/refresh', null, {
+        withCredentials: true,
+      })
+      expect(result).toBe('refreshed-token')
+      expect(mockSetToken).toHaveBeenCalledWith('refreshed-token')
     })
 
-    it('logout removes both tokens', () => {
-      localStorage.setItem('token', 'abc')
-      localStorage.setItem('refreshToken', 'xyz')
+    it('throws when the response has no access token', async () => {
+      vi.mocked(axios.post).mockResolvedValue({ data: {} })
 
-      logout()
+      await expect(refreshAccessToken()).rejects.toThrow('Access token is missing')
+    })
 
-      expect(localStorage.getItem('token')).toBeNull()
-      expect(localStorage.getItem('refreshToken')).toBeNull()
+    it('propagates errors, e.g. no valid refresh cookie', async () => {
+      vi.mocked(axios.post).mockRejectedValue(new Error('401'))
+
+      await expect(refreshAccessToken()).rejects.toThrow('401')
     })
   })
 })

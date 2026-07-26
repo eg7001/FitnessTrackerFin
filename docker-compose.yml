@@ -19,8 +19,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
 
-    ports:
-      - "5432:5432"
+    # No published port: only the backend service needs to reach Postgres,
+    # and it does so over the internal Docker network by service name
+    # ("db"). Publishing 5432 would expose the database directly to the
+    # host network for no benefit. Use `docker compose exec db psql ...`
+    # for local inspection instead.
 
 
     healthcheck:
@@ -48,6 +51,8 @@ services:
       - Jwt__Issuer=FitnessTrackerAPI
       - Jwt__Audience=FitnessTrackerClient
       - Jwt__ExpiresInMinutes=60
+
+      - Cors__AllowedOrigin=http://localhost
 
     ports:
       - "8080:8080"

@@ -1,7 +1,24 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import TopLayout from '@/components/TopLayout.vue'
 import { useAuth } from '@/stores/auth'
+
+// TopLayout's logout button now calls the real authService.logout(), which
+// hits the backend to revoke the refresh-token cookie before clearing local
+// state. Faking the transport layer (api.ts) lets that real logic run
+// end-to-end here without a real network call.
+vi.mock('@/services/api', () => ({
+  default: { post: vi.fn().mockResolvedValue({}) },
+}))
+
+const mockPush = vi.fn()
+vi.mock('vue-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('vue-router')>()
+  return {
+    ...actual,
+    useRouter: () => ({ push: mockPush }),
+  }
+})
 
 describe('TopLayout', () => {
   afterEach(() => {
@@ -10,6 +27,7 @@ describe('TopLayout', () => {
     // This is exactly the kind of "tests must be independent" gotcha that's
     // worth seeing once in a real codebase.
     useAuth().logout()
+    mockPush.mockClear()
   })
 
   it('shows login/register links when logged out', () => {
@@ -34,7 +52,7 @@ describe('TopLayout', () => {
     expect(wrapper.text()).toContain('Logout')
   })
 
-  it('clicking logout clears the auth token', async () => {
+  it('clicking logout clears the auth token and redirects to login', async () => {
     useAuth().setToken('some-token')
 
     const wrapper = mount(TopLayout, {
@@ -42,8 +60,10 @@ describe('TopLayout', () => {
     })
 
     await wrapper.find('button').trigger('click')
+    await vi.waitFor(() => {
+      expect(useAuth().isLoggedIn.value).toBe(false)
+    })
 
-    expect(useAuth().isLoggedIn.value).toBe(false)
-    expect(localStorage.getItem('token')).toBeNull()
+    expect(mockPush).toHaveBeenCalledWith('/login')
   })
 })

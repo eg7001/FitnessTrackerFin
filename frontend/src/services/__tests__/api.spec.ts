@@ -9,25 +9,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // vi.mock(...) factories are hoisted above imports/consts, so anything the
 // factory closes over has to be created with vi.hoisted() - otherwise we'd
 // hit a "Cannot access before initialization" error.
-const { mockInstance, mockAxiosPost } = vi.hoisted(() => {
+const { mockInstance } = vi.hoisted(() => {
   const instance = vi.fn() as any
   instance.interceptors = {
     request: { use: vi.fn() },
     response: { use: vi.fn() },
   }
-  return { mockInstance: instance, mockAxiosPost: vi.fn() }
+  return { mockInstance: instance }
 })
 
 vi.mock('axios', () => ({
   default: {
     create: vi.fn(() => mockInstance),
-    post: mockAxiosPost,
   },
 }))
 
 vi.mock('@/services/authService', () => ({
   getToken: vi.fn(),
-  getRefreshToken: vi.fn(),
+  setToken: vi.fn(),
+  refreshAccessToken: vi.fn(),
   logout: vi.fn(),
 }))
 
@@ -49,6 +49,11 @@ describe('api interceptors', () => {
     responseErrorInterceptor = mockInstance.interceptors.response.use.mock.calls[0][1]
   })
 
+  it('creates the axios instance with a relative baseURL and credentials enabled', async () => {
+    const axios = (await import('axios')).default
+    expect(axios.create).toHaveBeenCalledWith({ baseURL: '/api', withCredentials: true })
+  })
+
   it('attaches an Authorization header when a token exists', async () => {
     const { getToken } = await import('@/services/authService')
     vi.mocked(getToken).mockReturnValue('my-token')
@@ -67,10 +72,9 @@ describe('api interceptors', () => {
     expect(config.headers['Authorization']).toBeUndefined()
   })
 
-  it('on a 401, refreshes the token and retries the original request', async () => {
-    const { getRefreshToken } = await import('@/services/authService')
-    vi.mocked(getRefreshToken).mockReturnValue('my-refresh-token')
-    mockAxiosPost.mockResolvedValue({ data: { accessToken: 'fresh-token' } })
+  it('on a 401, refreshes the token via the httpOnly cookie and retries the original request', async () => {
+    const { refreshAccessToken, setToken } = await import('@/services/authService')
+    vi.mocked(refreshAccessToken).mockResolvedValue('fresh-token')
     mockInstance.mockResolvedValue({ data: 'retried-response' })
 
     const originalRequest: any = { headers: {}, url: '/workouts' }
@@ -78,34 +82,21 @@ describe('api interceptors', () => {
 
     const result = await responseErrorInterceptor(error)
 
-    expect(mockAxiosPost).toHaveBeenCalledWith('https://localhost:7008/api/auth/refresh', {
-      refreshToken: 'my-refresh-token',
-    })
+    expect(refreshAccessToken).toHaveBeenCalled()
+    expect(setToken).toHaveBeenCalledWith('fresh-token')
     expect(originalRequest.headers['Authorization']).toBe('Bearer fresh-token')
     expect(mockInstance).toHaveBeenCalledWith(originalRequest)
     expect(result).toEqual({ data: 'retried-response' })
   })
 
-  it('logs out and rejects when there is no refresh token to use', async () => {
-    const { getRefreshToken, logout } = await import('@/services/authService')
-    vi.mocked(getRefreshToken).mockReturnValue(null)
+  it('logs out and rejects when there is no valid refresh session', async () => {
+    const { refreshAccessToken, logout } = await import('@/services/authService')
+    vi.mocked(refreshAccessToken).mockRejectedValue(new Error('no valid session'))
 
     const originalRequest = { headers: {}, url: '/workouts' }
     const error = { response: { status: 401 }, config: originalRequest }
 
-    await expect(responseErrorInterceptor(error)).rejects.toBeTruthy()
-    expect(logout).toHaveBeenCalled()
-  })
-
-  it('logs out and rejects when the refresh request itself fails', async () => {
-    const { getRefreshToken, logout } = await import('@/services/authService')
-    vi.mocked(getRefreshToken).mockReturnValue('my-refresh-token')
-    mockAxiosPost.mockRejectedValue(new Error('refresh endpoint down'))
-
-    const originalRequest = { headers: {}, url: '/workouts' }
-    const error = { response: { status: 401 }, config: originalRequest }
-
-    await expect(responseErrorInterceptor(error)).rejects.toThrow('refresh endpoint down')
+    await expect(responseErrorInterceptor(error)).rejects.toThrow('no valid session')
     expect(logout).toHaveBeenCalled()
   })
 
