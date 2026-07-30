@@ -54,6 +54,8 @@ services:
 
       - Cors__AllowedOrigin=http://localhost
 
+      - Admin__BootstrapEmail=${ADMIN_BOOTSTRAP_EMAIL}
+
     ports:
       - "8080:8080"
 

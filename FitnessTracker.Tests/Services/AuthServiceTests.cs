@@ -6,6 +6,7 @@ using FitnessTracker.Services;
 using FitnessTracker.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using Xunit;
 
@@ -37,6 +38,16 @@ public class AuthServiceTests
         return manager;
     }
 
+    private static IConfiguration CreateConfiguration(string? bootstrapAdminEmail = null)
+    {
+        return new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Admin:BootstrapEmail"] = bootstrapAdminEmail
+            })
+            .Build();
+    }
+
     // AuthService.Login/RefreshToken return `object` (an anonymous type).
     // Anonymous types are `internal`, so a different assembly (this test
     // project) can't cast to them directly - reflection sidesteps that.
@@ -55,7 +66,7 @@ public class AuthServiceTests
         userManager
             .Setup(m => m.CreateAsync(It.IsAny<AppUser>(), "Password123!"))
             .ReturnsAsync(IdentityResult.Success);
-        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext());
+        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext(), Mock.Of<IConfiguration>());
         var dto = new RegisterDto("test@example.com", "Password123!");
 
         // Act
@@ -76,7 +87,7 @@ public class AuthServiceTests
         userManager
             .Setup(m => m.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
             .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Password too weak" }));
-        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext());
+        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext(), Mock.Of<IConfiguration>());
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => sut.Register(new RegisterDto("test@example.com", "weak")));
@@ -93,7 +104,7 @@ public class AuthServiceTests
         userManager
             .Setup(m => m.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
             .ReturnsAsync(IdentityResult.Success);
-        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext());
+        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext(), Mock.Of<IConfiguration>());
 
         await sut.Register(new RegisterDto("first@example.com", "Password123!"));
 
@@ -111,9 +122,48 @@ public class AuthServiceTests
         userManager
             .Setup(m => m.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
             .ReturnsAsync(IdentityResult.Success);
-        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext());
+        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext(), Mock.Of<IConfiguration>());
 
         await sut.Register(new RegisterDto("second@example.com", "Password123!"));
+
+        userManager.Verify(m => m.AddToRoleAsync(It.IsAny<AppUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Register_WhenEmailMatchesBootstrapAdmin_IsAssignedAdminRoleEvenIfNotFirstUser()
+    {
+        // Admin:BootstrapEmail lets a specific deployer-chosen address always
+        // become Admin, regardless of registration order - the whole point
+        // is to not depend on who happens to sign up first.
+        var userManager = CreateUserManagerMock();
+        userManager.Setup(m => m.Users).Returns(new List<AppUser>
+        {
+            new AppUser { Id = Guid.NewGuid(), Email = "existing@example.com", UserName = "existing@example.com" }
+        }.AsQueryable());
+        userManager
+            .Setup(m => m.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
+        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext(), CreateConfiguration("admin@admin.com"));
+
+        await sut.Register(new RegisterDto("admin@admin.com", "Password123!"));
+
+        userManager.Verify(m => m.AddToRoleAsync(It.IsAny<AppUser>(), "Admin"), Times.Once);
+    }
+
+    [Fact]
+    public async Task Register_WhenEmailDoesNotMatchBootstrapAdminAndIsNotFirstUser_IsNotAssignedAdminRole()
+    {
+        var userManager = CreateUserManagerMock();
+        userManager.Setup(m => m.Users).Returns(new List<AppUser>
+        {
+            new AppUser { Id = Guid.NewGuid(), Email = "existing@example.com", UserName = "existing@example.com" }
+        }.AsQueryable());
+        userManager
+            .Setup(m => m.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
+        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext(), CreateConfiguration("admin@admin.com"));
+
+        await sut.Register(new RegisterDto("someone-else@example.com", "Password123!"));
 
         userManager.Verify(m => m.AddToRoleAsync(It.IsAny<AppUser>(), It.IsAny<string>()), Times.Never);
     }
@@ -123,7 +173,7 @@ public class AuthServiceTests
     {
         var userManager = CreateUserManagerMock();
         userManager.Setup(m => m.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((AppUser?)null);
-        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext());
+        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext(), Mock.Of<IConfiguration>());
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => sut.Login(new LoginDto("ghost@example.com", "whatever")));
@@ -136,7 +186,7 @@ public class AuthServiceTests
         var userManager = CreateUserManagerMock();
         userManager.Setup(m => m.FindByEmailAsync(user.Email!)).ReturnsAsync(user);
         userManager.Setup(m => m.CheckPasswordAsync(user, "wrong")).ReturnsAsync(false);
-        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext());
+        var sut = new AuthService(userManager.Object, Mock.Of<ITokenService>(), CreateContext(), Mock.Of<IConfiguration>());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => sut.Login(new LoginDto(user.Email!, "wrong")));
@@ -157,7 +207,7 @@ public class AuthServiceTests
         tokenService.Setup(t => t.GenerateRefreshToken()).Returns("refresh-token");
 
         var context = CreateContext();
-        var sut = new AuthService(userManager.Object, tokenService.Object, context);
+        var sut = new AuthService(userManager.Object, tokenService.Object, context, Mock.Of<IConfiguration>());
 
         var result = await sut.Login(new LoginDto(user.Email!, "correct"));
 
@@ -173,7 +223,7 @@ public class AuthServiceTests
     [Fact]
     public async Task RefreshToken_WhenTokenDoesNotExist_ThrowsUnauthorizedAccessException()
     {
-        var sut = new AuthService(CreateUserManagerMock().Object, Mock.Of<ITokenService>(), CreateContext());
+        var sut = new AuthService(CreateUserManagerMock().Object, Mock.Of<ITokenService>(), CreateContext(), Mock.Of<IConfiguration>());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => sut.RefreshToken(new TokenRefreshRequestDto { RefreshToken = "does-not-exist" }));
@@ -194,7 +244,7 @@ public class AuthServiceTests
         });
         await context.SaveChangesAsync();
 
-        var sut = new AuthService(CreateUserManagerMock().Object, Mock.Of<ITokenService>(), context);
+        var sut = new AuthService(CreateUserManagerMock().Object, Mock.Of<ITokenService>(), context, Mock.Of<IConfiguration>());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => sut.RefreshToken(new TokenRefreshRequestDto { RefreshToken = "expired-token" }));
@@ -215,7 +265,7 @@ public class AuthServiceTests
         });
         await context.SaveChangesAsync();
 
-        var sut = new AuthService(CreateUserManagerMock().Object, Mock.Of<ITokenService>(), context);
+        var sut = new AuthService(CreateUserManagerMock().Object, Mock.Of<ITokenService>(), context, Mock.Of<IConfiguration>());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => sut.RefreshToken(new TokenRefreshRequestDto { RefreshToken = "revoked-token" }));
@@ -240,7 +290,7 @@ public class AuthServiceTests
         tokenService.Setup(t => t.CreateToken(It.IsAny<AppUser>(), It.IsAny<IEnumerable<string>>())).Returns("new-access-token");
         tokenService.Setup(t => t.GenerateRefreshToken()).Returns("new-refresh-token");
 
-        var sut = new AuthService(CreateUserManagerMock().Object, tokenService.Object, context);
+        var sut = new AuthService(CreateUserManagerMock().Object, tokenService.Object, context, Mock.Of<IConfiguration>());
 
         var result = await sut.RefreshToken(new TokenRefreshRequestDto { RefreshToken = "old-token" });
 
@@ -269,7 +319,7 @@ public class AuthServiceTests
         });
         await context.SaveChangesAsync();
 
-        var sut = new AuthService(CreateUserManagerMock().Object, Mock.Of<ITokenService>(), context);
+        var sut = new AuthService(CreateUserManagerMock().Object, Mock.Of<ITokenService>(), context, Mock.Of<IConfiguration>());
 
         await sut.Logout("active-token");
 
@@ -280,7 +330,7 @@ public class AuthServiceTests
     [Fact]
     public async Task Logout_WithUnknownToken_DoesNotThrow()
     {
-        var sut = new AuthService(CreateUserManagerMock().Object, Mock.Of<ITokenService>(), CreateContext());
+        var sut = new AuthService(CreateUserManagerMock().Object, Mock.Of<ITokenService>(), CreateContext(), Mock.Of<IConfiguration>());
 
         await sut.Logout("does-not-exist");
     }

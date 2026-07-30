@@ -107,13 +107,29 @@ builder.Services.AddRateLimiter(options =>
 var app = builder.Build();
 
 // Make sure the "Admin" role exists before anyone tries to register into
-// it (AuthService assigns it to the first user who ever signs up).
+// it (AuthService assigns it to the first user who ever signs up, or to
+// Admin:BootstrapEmail if configured).
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
     if (!await roleManager.RoleExistsAsync("Admin"))
     {
         await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
+    }
+
+    // Covers the case where Admin:BootstrapEmail names a user who already
+    // registered before this config was set (or before they had the role) -
+    // AuthService.Register only grants Admin at the moment of registration,
+    // so an existing account needs this separate catch-up check.
+    var bootstrapAdminEmail = builder.Configuration["Admin:BootstrapEmail"];
+    if (!string.IsNullOrWhiteSpace(bootstrapAdminEmail))
+    {
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+        var bootstrapUser = await userManager.FindByEmailAsync(bootstrapAdminEmail);
+        if (bootstrapUser != null && !await userManager.IsInRoleAsync(bootstrapUser, "Admin"))
+        {
+            await userManager.AddToRoleAsync(bootstrapUser, "Admin");
+        }
     }
 }
 

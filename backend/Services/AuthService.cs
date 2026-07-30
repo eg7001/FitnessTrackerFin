@@ -13,24 +13,35 @@ namespace FitnessTracker.Services
         UserManager<AppUser> _userManager;
         ITokenService _tokenService;
         ApplicationDbContext _context;
+        IConfiguration _configuration;
 
-        public AuthService(UserManager<AppUser> userManager, ITokenService tokenService,ApplicationDbContext context)
+        public AuthService(UserManager<AppUser> userManager, ITokenService tokenService, ApplicationDbContext context, IConfiguration configuration)
         {
             _userManager = userManager;
             _tokenService = tokenService;
             _context = context;
+            _configuration = configuration;
         }
 
         public async Task Register(RegisterDto dto)
         {
-            // Whoever signs up first becomes the catalog admin - there's no
-            // admin UI yet, so this is the only way anyone ever gets the
-            // "Admin" role. Everyone after the first user is a normal user.
+            // Two independent ways to land the "Admin" role, since there's no
+            // admin UI: whoever signs up first (a fragile default - it
+            // depends entirely on registration order, which is exactly what
+            // caused test accounts to grab it during development), or a
+            // specific email designated via Admin:BootstrapEmail config
+            // (deployer-chosen, deterministic regardless of order). Neither
+            // is required - if BootstrapEmail is unset, only the
+            // first-user rule applies, unchanged from before.
             // Synchronous by design: EF's async LINQ operators require an
             // async query provider, which a plain mocked/in-memory
             // IQueryable in tests won't have. A one-off check on a rare
             // operation like registration doesn't need to be async here.
             var isFirstUser = !_userManager.Users.Any();
+
+            var bootstrapAdminEmail = _configuration["Admin:BootstrapEmail"];
+            var isBootstrapAdmin = !string.IsNullOrWhiteSpace(bootstrapAdminEmail)
+                && string.Equals(dto.Email, bootstrapAdminEmail, StringComparison.OrdinalIgnoreCase);
 
             var user = new AppUser
             {
@@ -46,7 +57,7 @@ namespace FitnessTracker.Services
                 throw new InvalidOperationException(string.Join(", ", errors));
             }
 
-            if (isFirstUser)
+            if (isFirstUser || isBootstrapAdmin)
             {
                 await _userManager.AddToRoleAsync(user, "Admin");
             }
